@@ -8,28 +8,43 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-registro-192.png', 'icon-registro-512.png'],
+      devOptions: {
+        enabled: true
+      },
       manifest: {
-        name: 'Mundo Lib - Registro de Productos',
-        short_name: 'Registro',
-        description: 'App para registrar y completar productos - Mundo Lib',
+        name: 'Mundo Lib - Registro',
+        short_name: 'Mundo Lib',
+        description: 'Sistema de gestión de inventario para Mundo Lib',
         theme_color: '#f59e0b',
-        background_color: '#f59e0b',
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
           {
-            src: 'icon-registro-192.png',
+            src: '/icon-registro-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: 'icon-registro-512.png',
+            src: '/icon-registro-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/icon-registro-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/icon-registro-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
@@ -51,7 +66,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^http:\/\/192\.168\.0\.32:5000\/api\/.*/i,
+            urlPattern: /^https:\/\/catalogo-productos-production-9459\.up\.railway\.app\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
