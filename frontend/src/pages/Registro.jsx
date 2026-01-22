@@ -3,8 +3,10 @@ import { getProductosPorEstado, createProductoRapido, updateProducto } from '../
 import FormularioCompleto from './FormularioCompleto';
 import VerEditarProducto from './VerEditarProducto';
 import SelectorImagen from '../components/SelectorImagen';
+import { useTheme } from '../hooks/useTheme';
 
 function Registro() {
+  const { theme, toggleTheme } = useTheme();
   const [pestanaActiva, setPestanaActiva] = useState('existentes');
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,12 +33,20 @@ function Registro() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header */}
-      <div className="bg-amber-500 text-white p-4 shadow-lg">
+      <div className="bg-amber-500 dark:bg-amber-700 text-white p-4 shadow-lg relative">
         <h1 className="text-lg md:text-xl font-bold text-center">
           APP REGISTROS DE PRODUCTOS
         </h1>
+        {/* Botón de tema */}
+        <button
+          onClick={toggleTheme}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-amber-600 dark:hover:bg-amber-800 transition-colors"
+          aria-label="Cambiar tema"
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
       </div>
 
       {/* Buscador */}
@@ -46,20 +56,20 @@ function Registro() {
           placeholder="🔍 Buscar producto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-6 py-4 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
         />
       </div>
 
       {/* Pestañas */}
       <div className="max-w-6xl mx-auto px-4 mt-6">
-        <div className="flex gap-2 border-b-2 border-gray-200">
+        <div className="flex gap-2 border-b-2 border-gray-200 dark:border-gray-700">
           {/* Pestaña Existentes */}
           <button
             onClick={() => setPestanaActiva('existente')}
             className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
               pestanaActiva === 'existente'
-                ? 'bg-white text-green-600 border-b-4 border-green-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border-b-4 border-green-600 dark:border-green-400'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             ✅ Productos Existentes
@@ -70,8 +80,8 @@ function Registro() {
             onClick={() => setPestanaActiva('proceso')}
             className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
               pestanaActiva === 'proceso'
-                ? 'bg-white text-amber-600 border-b-4 border-amber-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 border-b-4 border-amber-600 dark:border-amber-400'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             ⏳ En Proceso
@@ -82,8 +92,8 @@ function Registro() {
             onClick={() => setPestanaActiva('completado')}
             className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
               pestanaActiva === 'completado'
-                ? 'bg-white text-purple-600 border-b-4 border-purple-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-b-4 border-purple-600 dark:border-purple-400'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
             🎉 Completados
@@ -95,13 +105,13 @@ function Registro() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Cargando productos...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando productos...</p>
           </div>
         ) : productos.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
             <p className="text-2xl">📦</p>
-            <p className="text-gray-600 mt-4">No hay productos en esta sección</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-4">No hay productos en esta sección</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -147,30 +157,30 @@ function Registro() {
 
 // Componente Card de Producto
 function ProductoCard({ producto, tipo, onActualizar }) {
-  const colorBorde = 
-    tipo === 'existente' ? 'border-green-500' :
-    tipo === 'proceso' ? 'border-amber-500' :
-    'border-purple-500';
+  const colorBorde =
+    tipo === 'existente' ? 'border-green-500 dark:border-green-400' :
+    tipo === 'proceso' ? 'border-amber-500 dark:border-amber-400' :
+    'border-purple-500 dark:border-purple-400';
 
   const colorFondo =
-    tipo === 'existente' ? 'bg-green-50' :
-    tipo === 'proceso' ? 'bg-amber-50' :
-    'bg-purple-50';
+    tipo === 'existente' ? 'bg-green-50 dark:bg-green-900/20' :
+    tipo === 'proceso' ? 'bg-amber-50 dark:bg-amber-900/20' :
+    'bg-purple-50 dark:bg-purple-900/20';
 
   return (
-    <div className={`bg-white rounded-xl border-2 ${colorBorde} p-4 shadow-md`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl border-2 ${colorBorde} p-4 shadow-md`}>
       {/* Imagen */}
-      <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
         {producto.imagen ? (
           <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-4xl text-gray-400">📦</span>
+          <span className="text-4xl text-gray-400 dark:text-gray-500">📦</span>
         )}
       </div>
 
       {/* Info */}
-      <h3 className="font-bold text-lg mb-1 truncate">{producto.nombre || producto.descripcion}</h3>
-      <p className="text-sm text-gray-600 mb-2">ID: #{producto.id}</p>
+      <h3 className="font-bold text-lg mb-1 truncate dark:text-white">{producto.nombre || producto.descripcion}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">ID: #{producto.id}</p>
 
       {tipo === 'existente' && (
         <ProductoExistente producto={producto} onActualizar={onActualizar} />
@@ -195,28 +205,28 @@ function ProductoExistente({ producto, onActualizar }) {
   return (
     <>
       <div className="flex justify-between text-sm mb-2">
-        <span className="text-gray-600">Compra:</span>
-        <span className="font-bold">Bs {producto.precio_compra_unidad?.toFixed(2)}</span>
+        <span className="text-gray-600 dark:text-gray-400">Compra:</span>
+        <span className="font-bold dark:text-white">Bs {producto.precio_compra_unidad?.toFixed(2)}</span>
       </div>
       <div className="flex justify-between text-sm mb-2">
-        <span className="text-gray-600">Venta:</span>
-        <span className="font-bold text-green-600">Bs {producto.precio_venta_unidad?.toFixed(2)}</span>
+        <span className="text-gray-600 dark:text-gray-400">Venta:</span>
+        <span className="font-bold text-green-600 dark:text-green-400">Bs {producto.precio_venta_unidad?.toFixed(2)}</span>
       </div>
       <div className="flex justify-between text-sm mb-3">
-        <span className="text-gray-600">Stock:</span>
-        <span className="font-bold text-blue-600">{producto.cantidad_ingresada} unid</span>
+        <span className="text-gray-600 dark:text-gray-400">Stock:</span>
+        <span className="font-bold text-blue-600 dark:text-blue-400">{producto.cantidad_ingresada} unid</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setMostrarVerEditar(true)}
-          className="bg-green-100 text-green-700 py-2 rounded-lg font-bold hover:bg-green-200 text-sm"
+          className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 py-2 rounded-lg font-bold hover:bg-green-200 dark:hover:bg-green-900/60 text-sm"
         >
           Ver / Editar
         </button>
         <button
           onClick={() => setMostrarAgregarStock(true)}
-          className="bg-blue-100 text-blue-700 py-2 rounded-lg font-bold hover:bg-blue-200 text-sm"
+          className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-sm"
         >
           + Stock
         </button>
@@ -253,15 +263,15 @@ function ProductoEnProceso({ producto, onActualizar, colorFondo }) {
 
   return (
     <>
-      <div className={`${colorFondo} p-2 rounded mb-2`}>
+      <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
         <p className="text-sm">Cantidad: <span className="font-bold">{producto.cantidad_ingresada} unid</span></p>
       </div>
-      <div className="bg-red-100 text-red-700 text-xs p-2 rounded mb-3">
+      <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs p-2 rounded mb-3">
         ⚠️ FALTAN: Precios y datos completos
       </div>
       <button
         onClick={() => setMostrarFormulario(true)}
-        className="w-full bg-amber-500 text-white py-2 rounded-lg font-bold hover:bg-amber-600"
+        className="w-full bg-amber-500 dark:bg-amber-600 text-white py-2 rounded-lg font-bold hover:bg-amber-600 dark:hover:bg-amber-700"
       >
         Completar Registro
       </button>
@@ -286,19 +296,19 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
 
   return (
     <>
-      <div className={`${colorFondo} p-2 rounded mb-2`}>
+      <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
         <p className="text-sm">✅ Registro completo</p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
           Completado: {new Date(producto.fecha_completado).toLocaleDateString()}
         </p>
       </div>
       <button
         onClick={() => setMostrarVerEditar(true)}
-        className="w-full bg-purple-100 text-purple-700 py-2 rounded-lg font-bold hover:bg-purple-200"
+        className="w-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-bold hover:bg-purple-200 dark:hover:bg-purple-900/60"
       >
         Ver Detalles
       </button>
-      <p className="text-xs text-gray-500 text-center mt-2">Se queda aquí 2 días</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Se queda aquí 2 días</p>
 
       {mostrarVerEditar && (
         <VerEditarProducto
