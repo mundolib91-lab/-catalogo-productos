@@ -32,6 +32,16 @@ function Atencion({ menuHamburguesa }) {
 
       let productosData = response.data || [];
 
+      // Filtrar productos que tengan los datos mínimos necesarios para vender
+      productosData = productosData.filter(p => {
+        const tieneImagen = p.imagen && p.imagen.trim() !== '';
+        const tienePrecioVenta = p.precio_venta_unidad != null && p.precio_venta_unidad > 0;
+        const tienePrecioCompra = p.precio_compra_unidad != null && p.precio_compra_unidad > 0;
+        const tieneDescripcion = p.descripcion && p.descripcion.trim() !== '';
+
+        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion;
+      });
+
       // Filtrar solo faltantes si está activado
       if (soloFaltantes) {
         productosData = productosData.filter(p => p.faltante_reportado === true);
