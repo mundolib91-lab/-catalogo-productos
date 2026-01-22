@@ -33,13 +33,10 @@ function Registro() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-amber-500 text-white p-6 shadow-lg">
-        <h1 className="text-2xl md:text-3xl font-bold text-center">
-          VISTA DE REGISTROS - MUNDO LIB
+      <div className="bg-amber-500 text-white p-4 shadow-lg">
+        <h1 className="text-lg md:text-xl font-bold text-center">
+          APP REGISTROS DE PRODUCTOS
         </h1>
-        <p className="text-center text-sm md:text-base mt-2">
-          Flujo completo: Verificación - Registro - Completado
-        </p>
       </div>
 
       {/* Buscador */}
