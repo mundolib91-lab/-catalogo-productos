@@ -179,8 +179,9 @@ function ProductoCard({ producto, tipo, onActualizar }) {
       </div>
 
       {/* Info */}
-      <h3 className="font-bold text-lg mb-1 truncate dark:text-white">{producto.nombre || producto.descripcion}</h3>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">ID: #{producto.id}</p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2 min-h-[2.5rem]">
+        {producto.descripcion || producto.nombre || 'Sin descripción'}
+      </p>
 
       {tipo === 'existente' && (
         <ProductoExistente producto={producto} onActualizar={onActualizar} />
