@@ -221,16 +221,16 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
 
       {/* Info súper compacta */}
       <div className="px-1">
-        <p className="text-xs text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
           {producto.descripcion}
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-500 mb-1">
+        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">
           {producto.marca || 'Sin marca'}
         </p>
 
         {/* Precio súper compacto */}
         <div className="bg-green-50 dark:bg-green-900/30 rounded px-2 py-1 mb-1">
-          <p className="text-center text-base font-bold text-green-700 dark:text-green-400">
+          <p className="text-center text-lg font-bold text-green-700 dark:text-green-400">
             Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
           </p>
         </div>
@@ -238,7 +238,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
         {/* Botón Ver Usos súper compacto */}
         <button
           onClick={onVerUsos}
-          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-xs"
+          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm"
         >
           Ver Usos
         </button>
@@ -247,7 +247,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
         <div className="grid grid-cols-2 gap-1">
           <button
             onClick={onVerDetalles}
-            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-[10px]"
+            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-xs"
           >
             Detalles
           </button>
@@ -255,7 +255,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
           <button
             onClick={onReportarFaltante}
             disabled={yaReportado}
-            className={`py-1 rounded font-bold text-[10px] transition-colors ${
+            className={`py-1 rounded font-bold text-xs transition-colors ${
               yaReportado
                 ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
                 : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
