@@ -138,7 +138,7 @@ function Atencion({ menuHamburguesa }) {
       </div>
 
       {/* Lista de Productos */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-2 py-3">
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
@@ -152,7 +152,7 @@ function Atencion({ menuHamburguesa }) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {productos.map((producto) => (
               <ProductoCard
                 key={producto.id}
@@ -185,26 +185,26 @@ function Atencion({ menuHamburguesa }) {
   );
 }
 
-// Componente Card de Producto - OPTIMIZADO
+// Componente Card de Producto - MUY OPTIMIZADO
 function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }) {
   const tienePreciosMayor = producto.precios_por_mayor && producto.precios_por_mayor.length > 0;
   const yaReportado = producto.faltante_reportado === true;
 
   return (
-    <div className={`rounded-xl border-2 p-2 shadow-md relative ${
+    <div className={`rounded-lg border p-1 shadow relative ${
       yaReportado
         ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
         : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
     }`}>
       {/* Badge faltante reportado */}
       {yaReportado && (
-        <div className="absolute top-1 right-1 bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 px-2 py-0.5 rounded-full text-xs font-bold z-10">
+        <div className="absolute top-0.5 right-0.5 bg-red-600 dark:bg-red-800 text-white px-1.5 py-0.5 rounded text-[10px] font-bold z-10">
           Faltante
         </div>
       )}
 
-      {/* Imagen más grande */}
-      <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
+      {/* Imagen MUCHO más grande */}
+      <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 rounded-md mb-1 flex items-center justify-center overflow-hidden relative">
         {producto.imagen ? (
           <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
         ) : (
@@ -213,49 +213,49 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
 
         {/* Ícono precios por mayor */}
         {tienePreciosMayor && (
-          <div className="absolute top-1 right-1 bg-blue-500 dark:bg-blue-600 rounded-full p-1 text-xl">
+          <div className="absolute top-0.5 right-0.5 bg-blue-500 dark:bg-blue-600 rounded-full p-0.5 text-base">
             📦
           </div>
         )}
       </div>
 
-      {/* Info compacta */}
-      <div className="px-2">
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-1 line-clamp-2 font-medium">
+      {/* Info súper compacta */}
+      <div className="px-1">
+        <p className="text-xs text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
           {producto.descripcion}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
+        <p className="text-[10px] text-gray-500 dark:text-gray-500 mb-1">
           {producto.marca || 'Sin marca'}
         </p>
 
-        {/* Precio destacado más compacto */}
-        <div className="bg-green-50 dark:bg-green-900/30 rounded-lg px-3 py-1.5 mb-2">
-          <p className="text-center text-lg font-bold text-green-700 dark:text-green-400">
+        {/* Precio súper compacto */}
+        <div className="bg-green-50 dark:bg-green-900/30 rounded px-2 py-1 mb-1">
+          <p className="text-center text-base font-bold text-green-700 dark:text-green-400">
             Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
           </p>
         </div>
 
-        {/* Botón Ver Usos compacto */}
+        {/* Botón Ver Usos súper compacto */}
         <button
           onClick={onVerUsos}
-          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1.5 rounded-lg mb-2 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm"
+          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-xs"
         >
           Ver Usos
         </button>
 
-        {/* Botones de acción más pequeños */}
-        <div className="grid grid-cols-2 gap-1.5 mb-1">
+        {/* Botones de acción súper pequeños */}
+        <div className="grid grid-cols-2 gap-1">
           <button
             onClick={onVerDetalles}
-            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1.5 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-xs"
+            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-[10px]"
           >
-            Ver Detalles
+            Detalles
           </button>
 
           <button
             onClick={onReportarFaltante}
             disabled={yaReportado}
-            className={`py-1.5 rounded-lg font-bold text-xs transition-colors ${
+            className={`py-1 rounded font-bold text-[10px] transition-colors ${
               yaReportado
                 ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
                 : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
