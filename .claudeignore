@@ -1,0 +1,36 @@
+# Dependencias y node_modules
+node_modules/
+**/node_modules/
+
+# Archivos de build
+dist/
+build/
+**/dist/
+**/build/
+
+# Logs
+*.log
+
+# Archivos de entorno (pero Claude puede leerlos si es necesario)
+# .env
+
+# Cache de Vite
+**/.vite/
+.cache/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+nul
+
+# Editor
+.vscode/
+.idea/
+
+# Documentación de markdown (para reducir tokens, pero disponibles si se solicitan)
+*.md
+
+# Lockfiles (grandes y no necesarios para edición)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

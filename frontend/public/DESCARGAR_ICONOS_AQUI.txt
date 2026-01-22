@@ -1,0 +1,30 @@
+ICONOS TEMPORALES PARA PROBAR LA PWA
+======================================
+
+Descarga estos 2 iconos temporales para probar la instalación:
+
+ICONO 192x192:
+https://dummyimage.com/192x192/f59e0b/ffffff&text=REGISTRO
+
+ICONO 512x512:
+https://dummyimage.com/512x512/f59e0b/ffffff&text=REGISTRO
+
+
+INSTRUCCIONES:
+--------------
+1. Abre cada enlace en tu navegador
+2. Haz clic derecho > "Guardar imagen como..."
+3. Guárdalas en esta carpeta (public) con estos nombres:
+   - icon-registro-192.png
+   - icon-registro-512.png
+
+4. Reinicia el servidor:
+   cd frontend
+   npm run dev
+
+5. Recarga la página en tu celular
+6. Verás la opción de "Agregar a pantalla de inicio"
+
+
+NOTA: Estos son iconos temporales para prueba.
+Usa CREAR_ICONOS_PWA.md para crear iconos profesionales después.
