@@ -102,3 +102,23 @@ export const moverCompletadosAExistentes = async () => {
     handleError(error);
   }
 };
+
+// ============ FALTANTES ============
+
+export const reportarFaltante = async (id) => {
+  try {
+    const response = await axios.post(`${API_URL}/productos/${id}/reportar-faltante`);
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+export const getProductosFaltantes = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/productos/faltantes/lista`);
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};

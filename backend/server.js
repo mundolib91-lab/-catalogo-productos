@@ -313,10 +313,50 @@ app.post('/api/productos/mover-completados', async (req, res) => {
   }
 });
 
-// 8. Endpoint de prueba
+// 12. Reportar producto como faltante
+app.post('/api/productos/:id/reportar-faltante', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({
+        faltante_reportado: true,
+        fecha_reporte_faltante: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 13. Obtener todos los productos faltantes
+app.get('/api/productos/faltantes/lista', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .eq('faltante_reportado', true)
+      .order('fecha_reporte_faltante', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 14. Endpoint de prueba
 app.get('/', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'API de Catálogo de Productos funcionando correctamente',
     version: '1.0.0'
   });
