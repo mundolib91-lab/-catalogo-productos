@@ -185,92 +185,86 @@ function Atencion({ menuHamburguesa }) {
   );
 }
 
-// Componente Card de Producto
+// Componente Card de Producto - OPTIMIZADO
 function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }) {
   const tienePreciosMayor = producto.precios_por_mayor && producto.precios_por_mayor.length > 0;
   const yaReportado = producto.faltante_reportado === true;
 
   return (
-    <div className={`rounded-xl border-2 p-4 shadow-md relative ${
+    <div className={`rounded-xl border-2 p-2 shadow-md relative ${
       yaReportado
         ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
         : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
     }`}>
       {/* Badge faltante reportado */}
       {yaReportado && (
-        <div className="absolute top-2 right-2 bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded-full text-xs font-bold">
-          Faltante reportado
+        <div className="absolute top-1 right-1 bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 px-2 py-0.5 rounded-full text-xs font-bold z-10">
+          Faltante
         </div>
       )}
 
-      {/* Imagen */}
-      <div className="w-full h-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
+      {/* Imagen más grande */}
+      <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
         {producto.imagen ? (
           <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-4xl text-gray-400 dark:text-gray-500">📦</span>
+          <span className="text-5xl text-gray-400 dark:text-gray-500">📦</span>
         )}
 
         {/* Ícono precios por mayor */}
         {tienePreciosMayor && (
-          <div className="absolute top-2 right-2 text-2xl">
+          <div className="absolute top-1 right-1 bg-blue-500 dark:bg-blue-600 rounded-full p-1 text-xl">
             📦
           </div>
         )}
       </div>
 
-      {/* Info principal */}
-      <h3 className="font-bold text-lg mb-1 dark:text-white">
-        {producto.nombre_producto || producto.nombre || producto.descripcion}
-      </h3>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-        {producto.descripcion}
-      </p>
-      <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
-        Marca: {producto.marca || 'Sin marca'}
-      </p>
-
-      {/* Precio destacado */}
-      <div className="bg-green-50 dark:bg-green-900/30 rounded-lg px-4 py-2 mb-3">
-        <p className="text-center text-xl font-bold text-green-700 dark:text-green-400">
-          Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
+      {/* Info compacta */}
+      <div className="px-2">
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-1 line-clamp-2 font-medium">
+          {producto.descripcion}
         </p>
-      </div>
+        <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">
+          {producto.marca || 'Sin marca'}
+        </p>
 
-      {/* Botón Ver Usos */}
-      <button
-        onClick={onVerUsos}
-        className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-2 rounded-lg mb-2 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-      >
-        Ver Usos
-      </button>
+        {/* Precio destacado más compacto */}
+        <div className="bg-green-50 dark:bg-green-900/30 rounded-lg px-3 py-1.5 mb-2">
+          <p className="text-center text-lg font-bold text-green-700 dark:text-green-400">
+            Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
+          </p>
+        </div>
 
-      {/* Botones de acción */}
-      <div className="grid grid-cols-2 gap-2">
+        {/* Botón Ver Usos compacto */}
         <button
-          onClick={onVerDetalles}
-          className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-sm"
+          onClick={onVerUsos}
+          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1.5 rounded-lg mb-2 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm"
         >
-          Ver Detalles
+          Ver Usos
         </button>
 
-        <button
-          onClick={onReportarFaltante}
-          disabled={yaReportado}
-          className={`py-2 rounded-lg font-bold text-sm transition-colors ${
-            yaReportado
-              ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
-              : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
-          }`}
-        >
-          {yaReportado ? 'Ya Reportado' : 'Reportar Faltante'}
-        </button>
-      </div>
+        {/* Botones de acción más pequeños */}
+        <div className="grid grid-cols-2 gap-1.5 mb-1">
+          <button
+            onClick={onVerDetalles}
+            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1.5 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-xs"
+          >
+            Ver Detalles
+          </button>
 
-      {/* Texto informativo */}
-      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-        {yaReportado ? 'Ya en proceso de pedido' : 'Stock disponible | Toca para más info'}
-      </p>
+          <button
+            onClick={onReportarFaltante}
+            disabled={yaReportado}
+            className={`py-1.5 rounded-lg font-bold text-xs transition-colors ${
+              yaReportado
+                ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
+                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
+            }`}
+          >
+            {yaReportado ? 'Reportado' : 'Faltante'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
