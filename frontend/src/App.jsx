@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Registro from './pages/Registro';
 import Atencion from './pages/Atencion';
+import MenuHamburguesa from './components/MenuHamburguesa';
 
 function App() {
   const [vistaActual, setVistaActual] = useState('registro');
@@ -23,11 +24,15 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Si es pantalla pequeña (celular/tablet), solo mostrar una vista
+  // Si es pantalla pequeña (celular/tablet), mostrar vista con menú hamburguesa
   if (esPantallaPequena) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        {vistaActual === 'atencion' ? <Atencion /> : <Registro />}
+        {vistaActual === 'atencion' ? (
+          <Atencion menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
+        ) : (
+          <Registro menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
+        )}
       </div>
     );
   }

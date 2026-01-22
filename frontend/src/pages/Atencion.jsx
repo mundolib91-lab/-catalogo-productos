@@ -4,7 +4,7 @@ import { useTheme } from '../hooks/useTheme';
 import DetalleProducto from '../components/DetalleProducto';
 import UsosProducto from '../components/UsosProducto';
 
-function Atencion() {
+function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -59,9 +59,13 @@ function Atencion() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header */}
       <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 shadow-lg relative">
+        {/* Menú hamburguesa (solo en móvil) */}
+        {menuHamburguesa}
+
         <h1 className="text-lg md:text-xl font-bold text-center">
           Atención al Cliente
         </h1>
+
         {/* Botón de tema */}
         <button
           onClick={toggleTheme}

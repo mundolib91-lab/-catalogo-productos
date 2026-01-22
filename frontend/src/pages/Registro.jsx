@@ -5,7 +5,7 @@ import VerEditarProducto from './VerEditarProducto';
 import SelectorImagen from '../components/SelectorImagen';
 import { useTheme } from '../hooks/useTheme';
 
-function Registro() {
+function Registro({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
   const [pestanaActiva, setPestanaActiva] = useState('existentes');
   const [productos, setProductos] = useState([]);
@@ -36,9 +36,13 @@ function Registro() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header */}
       <div className="bg-amber-500 dark:bg-amber-700 text-white p-4 shadow-lg relative">
+        {/* Menú hamburguesa (solo en móvil) */}
+        {menuHamburguesa}
+
         <h1 className="text-lg md:text-xl font-bold text-center">
           APP REGISTROS DE PRODUCTOS
         </h1>
+
         {/* Botón de tema */}
         <button
           onClick={toggleTheme}
