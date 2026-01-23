@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { subirImagen } from '../utils/imageUpload';
+import Toast from './Toast';
+import { useToast } from '../hooks/useToast';
 
 function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [subiendo, setSubiendo] = useState(false);
   const [previsualizacion, setPrevisualizacion] = useState(imagenActual || '');
 
@@ -16,14 +19,14 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
     };
     reader.readAsDataURL(file);
 
-    // Subir a Supabase
+    // Subir a Cloudinary
     setSubiendo(true);
     try {
       const urlPublica = await subirImagen(file, productId);
       onImagenCambiada(urlPublica);
-      alert('✅ Imagen subida correctamente');
+      success('Imagen subida correctamente');
     } catch (error) {
-      alert('❌ Error al subir imagen: ' + error.message);
+      mostrarError('Error al subir imagen');
       setPrevisualizacion(imagenActual || '');
     } finally {
       setSubiendo(false);
@@ -36,8 +39,16 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
   };
 
   return (
-    <div className="mb-4">
-      <label className="block text-sm font-bold mb-2">Foto del Producto</label>
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="mb-4">
+        <label className="block text-sm font-bold mb-2">Foto del Producto</label>
 
       {/* Previsualización */}
       <div className="w-full h-48 bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
@@ -90,9 +101,10 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
       </div>
 
       <p className="text-xs text-gray-500 mt-2">
-        Formatos: JPG, PNG, WebP • Máx: 5MB
+        Formatos: JPG, PNG, WebP • Máx: 10MB
       </p>
     </div>
+    </>
   );
 }
 
