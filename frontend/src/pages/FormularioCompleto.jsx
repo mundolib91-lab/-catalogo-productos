@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getProducto, completarProducto } from '../utils/api';
 import SelectorImagen from '../components/SelectorImagen';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [formData, setFormData] = useState({
     // Datos ya existentes
     imagen: '',
@@ -57,7 +60,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
       
       setLoading(false);
     } catch (error) {
-      alert('Error al cargar producto: ' + error.message);
+      mostrarError('Error al cargar producto');
       onCerrar();
     }
   };
@@ -81,11 +84,11 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
       };
 
       await completarProducto(productoId, dataToSend);
-      
-      alert('✅ Producto completado exitosamente');
-      onGuardar();
+
+      success('Producto completado exitosamente');
+      setTimeout(() => onGuardar(), 1500);
     } catch (error) {
-      alert('❌ Error al completar: ' + error.message);
+      mostrarError('Error al completar el producto');
     } finally {
       setGuardando(false);
     }
@@ -103,8 +106,16 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="bg-white rounded-2xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
           <div>
@@ -390,6 +401,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
 

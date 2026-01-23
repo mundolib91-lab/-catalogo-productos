@@ -3,9 +3,12 @@ import { getProductosPorEstado, reportarFaltante as reportarFaltanteAPI } from '
 import { useTheme } from '../hooks/useTheme';
 import DetalleProducto from '../components/DetalleProducto';
 import UsosProducto from '../components/UsosProducto';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -65,16 +68,24 @@ function Atencion({ menuHamburguesa }) {
   const reportarFaltante = async (productoId) => {
     try {
       await reportarFaltanteAPI(productoId);
-      alert('✅ Faltante reportado correctamente');
+      success('Faltante reportado correctamente');
       cargarProductos();
     } catch (error) {
-      alert('❌ Error al reportar faltante: ' + error.message);
+      mostrarError('Error al reportar faltante');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      {/* Header */}
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        {/* Header */}
       <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 shadow-lg relative">
         {/* Menú hamburguesa (solo en móvil) */}
         {menuHamburguesa}
@@ -189,6 +200,7 @@ function Atencion({ menuHamburguesa }) {
         />
       )}
     </div>
+    </>
   );
 }
 

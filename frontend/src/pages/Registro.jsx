@@ -4,6 +4,8 @@ import FormularioCompleto from './FormularioCompleto';
 import VerEditarProducto from './VerEditarProducto';
 import SelectorImagen from '../components/SelectorImagen';
 import { useTheme } from '../hooks/useTheme';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 function Registro({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
@@ -331,6 +333,7 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
 
 // Componente Formulario Rápido
 function FormularioRapido({ onCerrar, onGuardar }) {
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [formData, setFormData] = useState({
     descripcion: '',
     cantidad_ingresada: '',
@@ -344,18 +347,26 @@ function FormularioRapido({ onCerrar, onGuardar }) {
 
     try {
       await createProductoRapido(formData);
-      alert('✅ Producto registrado en proceso');
-      onGuardar();
+      success('Producto registrado en proceso');
+      setTimeout(() => onGuardar(), 1500);
     } catch (error) {
-      alert('❌ Error al registrar: ' + error.message);
+      mostrarError('Error al registrar producto');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-amber-600">➕ Registro Rápido</h2>
           <button onClick={onCerrar} className="text-3xl text-gray-400 hover:text-gray-600">
@@ -404,11 +415,13 @@ function FormularioRapido({ onCerrar, onGuardar }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
 
 // Componente Agregar Stock
 function AgregarStock({ producto, onCerrar, onGuardar }) {
+  const { toast, success, error: mostrarError, warning, cerrarToast } = useToast();
   const [cantidadAgregar, setCantidadAgregar] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -420,7 +433,7 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
 
     const cantidad = parseInt(cantidadAgregar);
     if (!cantidad || cantidad <= 0) {
-      alert('⚠️ Debes ingresar una cantidad válida mayor a 0');
+      warning('Ingresa una cantidad válida mayor a 0');
       return;
     }
 
@@ -429,18 +442,26 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
       await updateProducto(producto.id, {
         cantidad_ingresada: nuevoStock
       });
-      alert(`✅ Stock actualizado: +${cantidad} unidades`);
-      onGuardar();
+      success(`Stock actualizado: +${cantidad} unidades`);
+      setTimeout(() => onGuardar(), 1500);
     } catch (error) {
-      alert('❌ Error al actualizar stock: ' + error.message);
+      mostrarError('Error al actualizar stock');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-blue-600">📦 Agregar Stock</h2>
           <button onClick={onCerrar} className="text-3xl text-gray-400 hover:text-gray-600">
@@ -506,6 +527,7 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
 
