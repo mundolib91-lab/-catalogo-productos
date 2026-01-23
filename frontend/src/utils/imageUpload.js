@@ -20,6 +20,13 @@ const BUCKET_NAME = 'productos-imagenes';
  */
 export const subirImagen = async (file, productId = null) => {
   try {
+    // Debug: Verificar variables de entorno al subir
+    console.log('=== DEBUG SUPABASE ===');
+    console.log('URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+    console.log('Key preview:', import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 30) + '...');
+    console.log('======================');
+
     // Validar que sea una imagen
     if (!file.type.startsWith('image/')) {
       throw new Error('El archivo debe ser una imagen');
