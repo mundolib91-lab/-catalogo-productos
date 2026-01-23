@@ -1,14 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Debug: Verificar variables de entorno
-console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-console.log('Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-console.log('Supabase Key first 20 chars:', import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 20));
+// Credenciales con fallback
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://zpvtovhomaykvcowbtda.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwdnRvdmhvbWF5a3Zjb3didGRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5MzA2NjEsImV4cCI6MjA4NDUwNjY2MX0.QA8GbR7ppXYb-AwSka7WT7YoYkwzpCXeo3jhqMdjpT4';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Debug
+console.log('Supabase URL:', SUPABASE_URL);
+console.log('Supabase Key exists:', !!SUPABASE_KEY);
+console.log('Supabase Key first 30 chars:', SUPABASE_KEY?.substring(0, 30));
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const BUCKET_NAME = 'productos-imagenes';
 
