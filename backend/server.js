@@ -241,6 +241,40 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
+    // Obtener producto actual para validar con datos actualizados
+    const { data: productoActual, error: errorGet } = await supabase
+      .from('productos')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (errorGet) throw errorGet;
+
+    // Combinar datos actuales con updates para validación
+    const productoFinal = { ...productoActual, ...updates };
+
+    // Validar que tenga TODOS los datos mínimos requeridos
+    const validaciones = {
+      imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
+      precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
+      precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0,
+      descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
+      stock: productoFinal.cantidad_ingresada != null && productoFinal.cantidad_ingresada > 0
+    };
+
+    // Verificar si falta algún campo
+    const camposFaltantes = Object.entries(validaciones)
+      .filter(([campo, valido]) => !valido)
+      .map(([campo]) => campo);
+
+    if (camposFaltantes.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Faltan datos requeridos para completar: ${camposFaltantes.join(', ')}`,
+        camposFaltantes
+      });
+    }
+
     // Marcar como completado
     updates.estado_registro = 'completado';
     updates.fecha_completado = new Date().toISOString();

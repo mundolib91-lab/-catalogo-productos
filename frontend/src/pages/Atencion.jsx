@@ -26,11 +26,17 @@ function Atencion({ menuHamburguesa }) {
   const cargarProductos = async () => {
     setLoading(true);
     try {
-      const response = await getProductosPorEstado('existente', {
-        search: busqueda
-      });
+      // Traer productos existentes Y completados en paralelo
+      const [responseExistente, responseCompletado] = await Promise.all([
+        getProductosPorEstado('existente', { search: busqueda }),
+        getProductosPorEstado('completado', { search: busqueda })
+      ]);
 
-      let productosData = response.data || [];
+      // Combinar ambos arrays
+      let productosData = [
+        ...(responseExistente.data || []),
+        ...(responseCompletado.data || [])
+      ];
 
       // Filtrar productos que tengan los datos mínimos necesarios para vender
       productosData = productosData.filter(p => {
@@ -38,8 +44,9 @@ function Atencion({ menuHamburguesa }) {
         const tienePrecioVenta = p.precio_venta_unidad != null && p.precio_venta_unidad > 0;
         const tienePrecioCompra = p.precio_compra_unidad != null && p.precio_compra_unidad > 0;
         const tieneDescripcion = p.descripcion && p.descripcion.trim() !== '';
+        const tieneStock = p.cantidad_ingresada != null && p.cantidad_ingresada > 0;
 
-        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion;
+        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion && tieneStock;
       });
 
       // Filtrar solo faltantes si está activado
