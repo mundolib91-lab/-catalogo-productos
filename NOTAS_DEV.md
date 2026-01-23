@@ -180,6 +180,26 @@ PORT=5000
 
 ---
 
+## 🎯 Decisiones Técnicas Importantes
+
+### ¿Por qué Cloudinary y NO Supabase Storage?
+
+**Problema encontrado:**
+- Supabase Storage tenía problemas con políticas y permisos
+- Era complicado configurar el acceso público/privado
+- Batallamos ~30 minutos intentando que funcionara
+
+**Solución adoptada:**
+- ✅ Usar **Cloudinary** para almacenamiento de imágenes
+- ✅ Más simple de configurar
+- ✅ Upload directo desde el frontend
+- ✅ Transformaciones de imagen incluidas
+- ✅ Preset configurado: `productos-mundolib`
+
+**IMPORTANTE:** Si en el futuro Claude sugiere usar Supabase Storage, recordarle esta decisión.
+
+---
+
 ## 🐛 Problemas Conocidos y Soluciones
 
 ### "No se puede conectar al servidor":
@@ -197,6 +217,11 @@ PORT=5000
 - En Safari (iPhone) usar el botón de Compartir
 - En Chrome (Android) buscar en menú "Instalar app"
 
+### "Error al subir imágenes":
+- ✅ Usar Cloudinary (NO Supabase Storage)
+- Verificar que `VITE_CLOUDINARY_CLOUD_NAME` y `VITE_CLOUDINARY_UPLOAD_PRESET` estén configurados
+- Verificar que el preset en Cloudinary esté en modo "unsigned"
+
 ---
 
 ## 📚 Recursos y Documentación
@@ -212,4 +237,7 @@ PORT=5000
 
 **Última actualización:** 2026-01-23
 **Rama actual al guardar:** dev
-**Cambios recientes:** Creación de rama dev, consolidación de documentación
+**Cambios recientes:**
+- Creación de rama dev para separar desarrollo/producción
+- Consolidación de documentación
+- Agregada sección de decisiones técnicas (Cloudinary vs Supabase Storage)
