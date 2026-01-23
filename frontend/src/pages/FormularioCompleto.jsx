@@ -197,6 +197,51 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
                 />
               </div>
 
+              {/* Cálculo en tiempo real de ganancia */}
+              {formData.precio_compra_unidad && formData.precio_venta_unidad && (
+                <div className="md:col-span-2">
+                  {(() => {
+                    const precioCompra = parseFloat(formData.precio_compra_unidad) || 0;
+                    const precioVenta = parseFloat(formData.precio_venta_unidad) || 0;
+                    const ganancia = precioVenta - precioCompra;
+                    const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+                    const esGanancia = ganancia >= 0;
+
+                    return (
+                      <div className={`p-4 rounded-lg border-2 ${
+                        esGanancia
+                          ? 'bg-green-100 border-green-400'
+                          : 'bg-red-100 border-red-400'
+                      }`}>
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Ganancia por unidad</p>
+                            <p className={`text-2xl font-bold ${
+                              esGanancia ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Porcentaje de ganancia</p>
+                            <p className={`text-2xl font-bold ${
+                              esGanancia ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        {!esGanancia && (
+                          <p className="text-center text-xs text-red-600 mt-2 font-semibold">
+                            ⚠️ Estás vendiendo con pérdida
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre del Producto *
