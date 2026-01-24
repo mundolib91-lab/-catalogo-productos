@@ -5,6 +5,7 @@ import DetalleProducto from '../components/DetalleProducto';
 import UsosProducto from '../components/UsosProducto';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import MenuReportarFaltantes from '../components/MenuReportarFaltantes';
 
 function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
@@ -21,6 +22,9 @@ function Atencion({ menuHamburguesa }) {
   // Modales
   const [productoDetalle, setProductoDetalle] = useState(null);
   const [productoUsos, setProductoUsos] = useState(null);
+
+  // Menu reportar faltantes
+  const [menuFaltantesAbierto, setMenuFaltantesAbierto] = useState(false);
 
   useEffect(() => {
     cargarProductos();
@@ -72,6 +76,19 @@ function Atencion({ menuHamburguesa }) {
       cargarProductos();
     } catch (error) {
       mostrarError('Error al reportar faltante');
+    }
+  };
+
+  const handleSeleccionarTipoFaltante = (tipo) => {
+    setMenuFaltantesAbierto(false);
+
+    // TODO: Abrir formulario según el tipo
+    if (tipo === 'nuevo') {
+      console.log('Abrir formulario Producto Nuevo');
+      // Próxima sesión: Abrir modal con formulario
+    } else if (tipo === 'grupo') {
+      console.log('Abrir formulario Grupo/Repisa');
+      // Próxima sesión: Abrir modal con formulario
     }
   };
 
@@ -199,7 +216,23 @@ function Atencion({ menuHamburguesa }) {
           onVolver={() => setProductoUsos(null)}
         />
       )}
+
+      {/* Botón flotante [+] para reportar faltantes */}
+      <button
+        onClick={() => setMenuFaltantesAbierto(true)}
+        className="fixed bottom-6 right-6 w-16 h-16 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all active:scale-95 z-30"
+        aria-label="Reportar faltante"
+      >
+        +
+      </button>
     </div>
+
+    {/* Menú reportar faltantes */}
+    <MenuReportarFaltantes
+      isOpen={menuFaltantesAbierto}
+      onClose={() => setMenuFaltantesAbierto(false)}
+      onSelectTipo={handleSeleccionarTipoFaltante}
+    />
     </>
   );
 }
