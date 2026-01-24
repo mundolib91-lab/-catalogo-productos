@@ -55,7 +55,7 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
         {/* Header del menú */}
         <div className="bg-gradient-to-r from-amber-500 to-blue-500 text-white p-6">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-2xl font-bold">Mundo Lib</h2>
+            <h2 className="text-3xl font-bold">Mundo Lib</h2>
             <button
               onClick={() => setMenuAbierto(false)}
               className="text-3xl hover:bg-white hover:bg-opacity-20 w-10 h-10 rounded-full flex items-center justify-center"
@@ -63,12 +63,12 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
               ×
             </button>
           </div>
-          <p className="text-sm opacity-90">Sistema de Gestión</p>
+          <p className="text-lg opacity-90">Sistema de Gestión</p>
         </div>
 
         {/* Opciones del menú */}
         <nav className="p-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-semibold uppercase">
+          <p className="text-base text-gray-500 dark:text-gray-400 mb-3 font-semibold uppercase">
             Selecciona una vista
           </p>
 
@@ -87,18 +87,18 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{opcion.icono}</span>
+                  <span className="text-3xl">{opcion.icono}</span>
                   <div className="flex-1">
                     <div className="font-bold">{opcion.nombre}</div>
                     {opcion.proximamente && (
-                      <div className="text-xs mt-1">Próximamente</div>
+                      <div className="text-base mt-1">Próximamente</div>
                     )}
                     {vistaActual === opcion.id && !opcion.proximamente && (
-                      <div className="text-xs mt-1 opacity-90">Vista actual</div>
+                      <div className="text-base mt-1 opacity-90">Vista actual</div>
                     )}
                   </div>
                   {vistaActual === opcion.id && !opcion.proximamente && (
-                    <span className="text-xl">✓</span>
+                    <span className="text-2xl">✓</span>
                   )}
                 </div>
               </button>
@@ -108,7 +108,7 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
 
         {/* Footer del menú */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          <p className="text-base text-gray-500 dark:text-gray-400 text-center">
             Versión 1.0.0
           </p>
         </div>

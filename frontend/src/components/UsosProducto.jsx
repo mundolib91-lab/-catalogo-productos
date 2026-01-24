@@ -6,11 +6,11 @@ function UsosProducto({ producto, onVolver }) {
         <div className="max-w-4xl mx-auto flex items-center">
           <button
             onClick={onVolver}
-            className="text-2xl font-bold hover:bg-blue-600 dark:hover:bg-blue-800 px-4 py-2 rounded-lg transition-colors"
+            className="text-3xl font-bold hover:bg-blue-600 dark:hover:bg-blue-800 px-4 py-2 rounded-lg transition-colors"
           >
             ← ATRÁS
           </button>
-          <h1 className="flex-1 text-center text-lg font-bold pr-24">
+          <h1 className="flex-1 text-center text-2xl font-bold pr-24">
             Usos y Aplicaciones
           </h1>
         </div>
@@ -29,13 +29,13 @@ function UsosProducto({ producto, onVolver }) {
             </div>
 
             <div className="flex-1">
-              <h2 className="font-bold text-lg dark:text-white">
+              <h2 className="font-bold text-2xl dark:text-white">
                 {producto.nombre_producto || producto.nombre || producto.descripcion}
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-lg text-gray-600 dark:text-gray-400">
                 {producto.descripcion}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <p className="text-base text-gray-500 dark:text-gray-500 mt-1">
                 Marca: {producto.marca || 'Sin marca'} | Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
               </p>
             </div>
@@ -46,7 +46,7 @@ function UsosProducto({ producto, onVolver }) {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md space-y-6">
           {/* Usos Principales */}
           <section>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
               USOS PRINCIPALES
             </h3>
             <div className="h-0.5 bg-gray-200 dark:bg-gray-700 mb-4"></div>
@@ -68,7 +68,7 @@ function UsosProducto({ producto, onVolver }) {
 
           {/* Aplicaciones */}
           <section>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
               APLICACIONES
             </h3>
             <div className="h-0.5 bg-gray-200 dark:bg-gray-700 mb-4"></div>
@@ -83,7 +83,7 @@ function UsosProducto({ producto, onVolver }) {
           {/* Características */}
           {(producto.nombre_producto || producto.categoria || producto.subcategoria) && (
             <section>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                 CARACTERÍSTICAS
               </h3>
               <div className="h-0.5 bg-gray-200 dark:bg-gray-700 mb-4"></div>
@@ -100,12 +100,12 @@ function UsosProducto({ producto, onVolver }) {
           {/* Recomendaciones */}
           {producto.notas_internas && (
             <section>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                 RECOMENDACIONES
               </h3>
               <div className="h-0.5 bg-gray-200 dark:bg-gray-700 mb-4"></div>
 
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-lg text-gray-600 dark:text-gray-400">
                 <p className="pl-4">{producto.notas_internas}</p>
               </div>
             </section>
@@ -115,7 +115,7 @@ function UsosProducto({ producto, onVolver }) {
         {/* Botón volver */}
         <button
           onClick={onVolver}
-          className="w-full mt-6 bg-blue-500 dark:bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors shadow-lg"
+          className="w-full mt-6 bg-blue-500 dark:bg-blue-600 text-white py-4 rounded-xl font-bold text-2xl hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors shadow-lg"
         >
           Volver a la Lista
         </button>

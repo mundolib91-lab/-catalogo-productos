@@ -119,8 +119,8 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
         {/* Header */}
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b">
           <div>
-            <h2 className="text-2xl font-bold text-amber-600">📋 Completar Registro</h2>
-            <p className="text-sm text-gray-600">ID: #{productoId}</p>
+            <h2 className="text-3xl font-bold text-amber-600">📋 Completar Registro</h2>
+            <p className="text-lg text-gray-600">ID: #{productoId}</p>
           </div>
           <button 
             onClick={onCerrar} 
@@ -136,7 +136,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
             <h3 className="font-bold text-blue-800 mb-3">✅ Datos ya registrados</h3>
             
             <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-lg font-medium text-gray-700 mb-1">
                 Descripción inicial
               </label>
               <input
@@ -149,7 +149,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
             </div>
 
             <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-lg font-medium text-gray-700 mb-1">
                 Cantidad ingresada
               </label>
               <input
@@ -177,7 +177,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Precio de Compra (Bs) *
                 </label>
                 <input
@@ -193,7 +193,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Precio de Venta (Bs) *
                 </label>
                 <input
@@ -226,16 +226,16 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
                       }`}>
                         <div className="grid grid-cols-2 gap-4 text-center">
                           <div>
-                            <p className="text-xs text-gray-600 mb-1">Ganancia por unidad</p>
-                            <p className={`text-2xl font-bold ${
+                            <p className="text-base text-gray-600 mb-1">Ganancia por unidad</p>
+                            <p className={`text-3xl font-bold ${
                               esGanancia ? 'text-green-700' : 'text-red-700'
                             }`}>
                               {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-600 mb-1">Porcentaje de ganancia</p>
-                            <p className={`text-2xl font-bold ${
+                            <p className="text-base text-gray-600 mb-1">Porcentaje de ganancia</p>
+                            <p className={`text-3xl font-bold ${
                               esGanancia ? 'text-green-700' : 'text-red-700'
                             }`}>
                               {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
@@ -243,7 +243,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
                           </div>
                         </div>
                         {!esGanancia && (
-                          <p className="text-center text-xs text-red-600 mt-2 font-semibold">
+                          <p className="text-center text-base text-red-600 mt-2 font-semibold">
                             ⚠️ Estás vendiendo con pérdida
                           </p>
                         )}
@@ -254,7 +254,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               )}
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Nombre del Producto *
                 </label>
                 <input
@@ -276,7 +276,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Marca</label>
                 <input
                   type="text"
                   name="marca"
@@ -288,7 +288,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Proveedor</label>
                 <input
                   type="text"
                   name="proveedor"
@@ -300,7 +300,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Categoría</label>
                 <input
                   type="text"
                   name="categoria"
@@ -312,7 +312,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategoría</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Subcategoría</label>
                 <input
                   type="text"
                   name="subcategoria"
@@ -324,7 +324,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rotación</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Rotación</label>
                 <select
                   name="rotacion"
                   value={formData.rotacion}
@@ -339,7 +339,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado Web</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Estado Web</label>
                 <select
                   name="estado"
                   value={formData.estado}
@@ -352,7 +352,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Usos / Aplicaciones
                 </label>
                 <textarea
@@ -366,7 +366,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Notas Internas
                 </label>
                 <textarea

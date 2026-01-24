@@ -208,6 +208,22 @@ PORT=5000
 
 ---
 
+## 🎨 Estándares de Diseño
+
+### Tamaños de Fuente (Tailwind CSS):
+
+Los tamaños están optimizados para **legibilidad en celular** y uso prolongado:
+
+- **text-base** (16px / Word 12): Textos pequeños, etiquetas secundarias
+- **text-lg** (18px / Word 13.5): Texto principal, descripciones, datos regulares
+- **text-xl** (20px / Word 15): Subtítulos, precios destacados
+- **text-2xl** (24px / Word 18): Títulos de sección, headers
+- **text-3xl** (30px / Word 22): Títulos principales
+
+**Decisión:** Se aumentaron los tamaños para mejor legibilidad en celular y reducir fatiga visual durante uso prolongado. Comparable a apps profesionales como WhatsApp Business y Mercado Libre.
+
+---
+
 ## 🎯 Decisiones Técnicas Importantes
 
 ### ¿Por qué Cloudinary y NO Supabase Storage?
@@ -285,3 +301,4 @@ PORT=5000
 - ✅ Hot reload probado y funcionando
 - ✅ Confirmado: App de producción instalable sin problemas
 - ✅ Documentado problema de Firewall y solución para acceso desde celular
+- ✅ **Tamaños de fuente aumentados globalmente** (18px texto regular, 24px títulos) para mejor legibilidad

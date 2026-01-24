@@ -90,10 +90,10 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
         {/* Header */}
         <div className="flex justify-between items-center mb-6 sticky top-0 bg-white pb-4 border-b z-10">
           <div>
-            <h2 className="text-2xl font-bold text-green-600">
+            <h2 className="text-3xl font-bold text-green-600">
               {modoEdicion ? '✏️ Editar Producto' : '👁️ Ver Producto'}
             </h2>
-            <p className="text-sm text-gray-600">ID: #{productoId}</p>
+            <p className="text-lg text-gray-600">ID: #{productoId}</p>
           </div>
           <button 
             onClick={onCerrar} 
@@ -115,7 +115,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             </div>
           ) : (
             <div className="mb-6">
-              <label className="block text-sm font-bold mb-2">Foto del Producto</label>
+              <label className="block text-lg font-bold mb-2">Foto del Producto</label>
               <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border-2 border-gray-300">
                 {formData.imagen ? (
                   <img
@@ -126,7 +126,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
                 ) : (
                   <div className="text-center text-gray-400">
                     <span className="text-5xl">📷</span>
-                    <p className="text-sm mt-2">Sin imagen</p>
+                    <p className="text-lg mt-2">Sin imagen</p>
                   </div>
                 )}
               </div>
@@ -139,7 +139,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Nombre del Producto
                 </label>
                 <input
@@ -157,7 +157,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Descripción
                 </label>
                 <input
@@ -175,7 +175,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Marca</label>
                 <input
                   type="text"
                   name="marca"
@@ -191,7 +191,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Proveedor</label>
                 <input
                   type="text"
                   name="proveedor"
@@ -207,7 +207,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Categoría</label>
                 <input
                   type="text"
                   name="categoria"
@@ -223,7 +223,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategoría</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Subcategoría</label>
                 <input
                   type="text"
                   name="subcategoria"
@@ -246,7 +246,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Precio Compra (Bs)
                 </label>
                 <input
@@ -265,7 +265,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Precio Venta (Bs)
                 </label>
                 <input
@@ -284,7 +284,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Ganancia (Bs)
                 </label>
                 <input
@@ -297,7 +297,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             </div>
 
             <div className="mt-4 p-3 bg-green-100 rounded-lg">
-              <p className="text-sm text-green-800">
+              <p className="text-lg text-green-800">
                 <span className="font-bold">Porcentaje de ganancia:</span> {producto?.porcentaje_ganancia?.toFixed(2) || '0.00'}%
               </p>
             </div>
@@ -309,7 +309,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Cantidad en Stock
                 </label>
                 <input
@@ -327,7 +327,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rotación</label>
+                <label className="block text-lg font-medium text-gray-700 mb-1">Rotación</label>
                 <select
                   name="rotacion"
                   value={formData.rotacion || 'medio'}
@@ -354,7 +354,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Usos / Aplicaciones
                 </label>
                 <textarea
@@ -372,7 +372,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-lg font-medium text-gray-700 mb-1">
                   Notas Internas
                 </label>
                 <textarea

@@ -90,7 +90,7 @@ function Atencion({ menuHamburguesa }) {
         {/* Menú hamburguesa (solo en móvil) */}
         {menuHamburguesa}
 
-        <h1 className="text-lg md:text-xl font-bold text-center">
+        <h1 className="text-2xl md:text-2xl font-bold text-center">
           Atención al Cliente
         </h1>
 
@@ -111,18 +111,18 @@ function Atencion({ menuHamburguesa }) {
           placeholder="🔍 Buscar producto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full px-6 py-4 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+          className="w-full px-6 py-4 text-2xl border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
         />
       </div>
 
       {/* Filtros */}
       <div className="max-w-6xl mx-auto px-4 mt-4">
         <div className="flex gap-2 items-center flex-wrap">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Filtros:</span>
+          <span className="text-lg text-gray-600 dark:text-gray-400">Filtros:</span>
 
           <button
             onClick={() => setFiltroMarca(!filtroMarca)}
-            className={`px-4 py-2 rounded-full text-sm transition-colors ${
+            className={`px-4 py-2 rounded-full text-lg transition-colors ${
               filtroMarca
                 ? 'bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -133,7 +133,7 @@ function Atencion({ menuHamburguesa }) {
 
           <button
             onClick={() => setFiltroProveedor(!filtroProveedor)}
-            className={`px-4 py-2 rounded-full text-sm transition-colors ${
+            className={`px-4 py-2 rounded-full text-lg transition-colors ${
               filtroProveedor
                 ? 'bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -144,7 +144,7 @@ function Atencion({ menuHamburguesa }) {
 
           <button
             onClick={() => setSoloFaltantes(!soloFaltantes)}
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
+            className={`px-4 py-2 rounded-full text-lg font-bold transition-colors ${
               soloFaltantes
                 ? 'bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -164,7 +164,7 @@ function Atencion({ menuHamburguesa }) {
           </div>
         ) : productos.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
-            <p className="text-2xl">📦</p>
+            <p className="text-3xl">📦</p>
             <p className="text-gray-600 dark:text-gray-400 mt-4">
               {soloFaltantes ? 'No hay productos faltantes' : 'No hay productos disponibles'}
             </p>
@@ -232,7 +232,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
 
         {/* Ícono precios por mayor */}
         {tienePreciosMayor && (
-          <div className="absolute top-0.5 right-0.5 bg-blue-500 dark:bg-blue-600 rounded-full p-0.5 text-base">
+          <div className="absolute top-0.5 right-0.5 bg-blue-500 dark:bg-blue-600 rounded-full p-0.5 text-xl">
             📦
           </div>
         )}
@@ -240,16 +240,16 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
 
       {/* Info súper compacta */}
       <div className="px-1">
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
+        <p className="text-lg text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
           {producto.descripcion}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">
+        <p className="text-base text-gray-500 dark:text-gray-500 mb-1">
           {producto.marca || 'Sin marca'}
         </p>
 
         {/* Precio súper compacto */}
         <div className="bg-green-50 dark:bg-green-900/30 rounded px-2 py-1 mb-1">
-          <p className="text-center text-lg font-bold text-green-700 dark:text-green-400">
+          <p className="text-center text-2xl font-bold text-green-700 dark:text-green-400">
             Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
           </p>
         </div>
@@ -257,7 +257,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
         {/* Botón Ver Usos súper compacto */}
         <button
           onClick={onVerUsos}
-          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm"
+          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-lg"
         >
           Ver Usos
         </button>
@@ -266,7 +266,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
         <div className="grid grid-cols-2 gap-1">
           <button
             onClick={onVerDetalles}
-            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-xs"
+            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-base"
           >
             Detalles
           </button>
@@ -274,7 +274,7 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
           <button
             onClick={onReportarFaltante}
             disabled={yaReportado}
-            className={`py-1 rounded font-bold text-xs transition-colors ${
+            className={`py-1 rounded font-bold text-base transition-colors ${
               yaReportado
                 ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
                 : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'

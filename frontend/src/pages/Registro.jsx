@@ -41,7 +41,7 @@ function Registro({ menuHamburguesa }) {
         {/* Menú hamburguesa (solo en móvil) */}
         {menuHamburguesa}
 
-        <h1 className="text-lg md:text-xl font-bold text-center">
+        <h1 className="text-2xl md:text-2xl font-bold text-center">
           APP REGISTROS DE PRODUCTOS
         </h1>
 
@@ -62,7 +62,7 @@ function Registro({ menuHamburguesa }) {
           placeholder="🔍 Buscar producto..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full px-6 py-4 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+          className="w-full px-6 py-4 text-2xl border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
         />
       </div>
 
@@ -72,7 +72,7 @@ function Registro({ menuHamburguesa }) {
           {/* Pestaña Existentes */}
           <button
             onClick={() => setPestanaActiva('existente')}
-            className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
+            className={`flex-1 py-4 px-4 font-bold text-lg md:text-2xl transition-all ${
               pestanaActiva === 'existente'
                 ? 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border-b-4 border-green-600 dark:border-green-400'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -84,7 +84,7 @@ function Registro({ menuHamburguesa }) {
           {/* Pestaña En Proceso */}
           <button
             onClick={() => setPestanaActiva('proceso')}
-            className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
+            className={`flex-1 py-4 px-4 font-bold text-lg md:text-2xl transition-all ${
               pestanaActiva === 'proceso'
                 ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 border-b-4 border-amber-600 dark:border-amber-400'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -96,7 +96,7 @@ function Registro({ menuHamburguesa }) {
           {/* Pestaña Completados */}
           <button
             onClick={() => setPestanaActiva('completado')}
-            className={`flex-1 py-4 px-4 font-bold text-sm md:text-base transition-all ${
+            className={`flex-1 py-4 px-4 font-bold text-lg md:text-2xl transition-all ${
               pestanaActiva === 'completado'
                 ? 'bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-b-4 border-purple-600 dark:border-purple-400'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -116,7 +116,7 @@ function Registro({ menuHamburguesa }) {
           </div>
         ) : productos.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
-            <p className="text-2xl">📦</p>
+            <p className="text-3xl">📦</p>
             <p className="text-gray-600 dark:text-gray-400 mt-4">No hay productos en esta sección</p>
           </div>
         ) : (
@@ -185,7 +185,7 @@ function ProductoCard({ producto, tipo, onActualizar }) {
       </div>
 
       {/* Info */}
-      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2 min-h-[2.5rem]">
+      <p className="text-lg text-gray-700 dark:text-gray-300 mb-3 line-clamp-2 min-h-[2.5rem]">
         {producto.descripcion || producto.nombre || 'Sin descripción'}
       </p>
 
@@ -211,15 +211,15 @@ function ProductoExistente({ producto, onActualizar }) {
 
   return (
     <>
-      <div className="flex justify-between text-sm mb-2">
+      <div className="flex justify-between text-lg mb-2">
         <span className="text-gray-600 dark:text-gray-400">Compra:</span>
         <span className="font-bold dark:text-white">Bs {producto.precio_compra_unidad?.toFixed(2)}</span>
       </div>
-      <div className="flex justify-between text-sm mb-2">
+      <div className="flex justify-between text-lg mb-2">
         <span className="text-gray-600 dark:text-gray-400">Venta:</span>
         <span className="font-bold text-green-600 dark:text-green-400">Bs {producto.precio_venta_unidad?.toFixed(2)}</span>
       </div>
-      <div className="flex justify-between text-sm mb-3">
+      <div className="flex justify-between text-lg mb-3">
         <span className="text-gray-600 dark:text-gray-400">Stock:</span>
         <span className="font-bold text-blue-600 dark:text-blue-400">{producto.cantidad_ingresada} unid</span>
       </div>
@@ -227,13 +227,13 @@ function ProductoExistente({ producto, onActualizar }) {
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setMostrarVerEditar(true)}
-          className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 py-2 rounded-lg font-bold hover:bg-green-200 dark:hover:bg-green-900/60 text-sm"
+          className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 py-2 rounded-lg font-bold hover:bg-green-200 dark:hover:bg-green-900/60 text-lg"
         >
           Ver / Editar
         </button>
         <button
           onClick={() => setMostrarAgregarStock(true)}
-          className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-sm"
+          className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-2 rounded-lg font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-lg"
         >
           + Stock
         </button>
@@ -271,9 +271,9 @@ function ProductoEnProceso({ producto, onActualizar, colorFondo }) {
   return (
     <>
       <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
-        <p className="text-sm">Cantidad: <span className="font-bold">{producto.cantidad_ingresada} unid</span></p>
+        <p className="text-lg">Cantidad: <span className="font-bold">{producto.cantidad_ingresada} unid</span></p>
       </div>
-      <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs p-2 rounded mb-3">
+      <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-base p-2 rounded mb-3">
         ⚠️ FALTAN: Precios y datos completos
       </div>
       <button
@@ -304,8 +304,8 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
   return (
     <>
       <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
-        <p className="text-sm">✅ Registro completo</p>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-lg">✅ Registro completo</p>
+        <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
           Completado: {new Date(producto.fecha_completado).toLocaleDateString()}
         </p>
       </div>
@@ -315,7 +315,7 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
       >
         Ver Detalles
       </button>
-      <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">Se queda aquí 2 días</p>
+      <p className="text-base text-gray-500 dark:text-gray-400 text-center mt-2">Se queda aquí 2 días</p>
 
       {mostrarVerEditar && (
         <VerEditarProducto
@@ -368,7 +368,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-amber-600">➕ Registro Rápido</h2>
+          <h2 className="text-3xl font-bold text-amber-600">➕ Registro Rápido</h2>
           <button onClick={onCerrar} className="text-3xl text-gray-400 hover:text-gray-600">
             ×
           </button>
@@ -382,7 +382,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
           />
 
           <div className="mb-4">
-            <label className="block text-sm font-bold mb-2">Descripción del Producto *</label>
+            <label className="block text-lg font-bold mb-2">Descripción del Producto *</label>
             <input
               type="text"
               required
@@ -394,7 +394,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-bold mb-2">Cantidad Ingresada *</label>
+            <label className="block text-lg font-bold mb-2">Cantidad Ingresada *</label>
             <input
               type="number"
               required
@@ -408,7 +408,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-500 text-white py-4 rounded-lg font-bold text-lg hover:bg-amber-600 disabled:bg-gray-400"
+            className="w-full bg-amber-500 text-white py-4 rounded-lg font-bold text-2xl hover:bg-amber-600 disabled:bg-gray-400"
           >
             {loading ? '⏳ Guardando...' : '💾 Guardar en Proceso'}
           </button>
@@ -463,7 +463,7 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-blue-600">📦 Agregar Stock</h2>
+          <h2 className="text-3xl font-bold text-blue-600">📦 Agregar Stock</h2>
           <button onClick={onCerrar} className="text-3xl text-gray-400 hover:text-gray-600">
             ×
           </button>
@@ -472,8 +472,8 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
         <form onSubmit={handleSubmit}>
           {/* Información del producto */}
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <p className="font-bold text-lg mb-2">{producto.nombre || producto.descripcion}</p>
-            <div className="flex justify-between text-sm">
+            <p className="font-bold text-2xl mb-2">{producto.nombre || producto.descripcion}</p>
+            <div className="flex justify-between text-lg">
               <span className="text-gray-600">Stock actual:</span>
               <span className="font-bold text-blue-600">{stockActual} unidades</span>
             </div>
@@ -481,14 +481,14 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
 
           {/* Cantidad a agregar */}
           <div className="mb-4">
-            <label className="block text-sm font-bold mb-2">Cantidad a agregar *</label>
+            <label className="block text-lg font-bold mb-2">Cantidad a agregar *</label>
             <input
               type="number"
               required
               min="1"
               value={cantidadAgregar}
               onChange={(e) => setCantidadAgregar(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg font-bold text-center"
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-2xl font-bold text-center"
               placeholder="0"
               autoFocus
             />
@@ -499,9 +499,9 @@ function AgregarStock({ producto, onCerrar, onGuardar }) {
             <div className="bg-green-50 p-4 rounded-lg mb-4 border-2 border-green-300">
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-bold">Nuevo stock:</span>
-                <span className="text-2xl font-bold text-green-600">{nuevoStock} unidades</span>
+                <span className="text-3xl font-bold text-green-600">{nuevoStock} unidades</span>
               </div>
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-base text-gray-600 mt-2">
                 {stockActual} + {cantidadAgregar} = {nuevoStock}
               </p>
             </div>

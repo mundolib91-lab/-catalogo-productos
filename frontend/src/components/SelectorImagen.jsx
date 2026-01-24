@@ -48,14 +48,14 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
         />
       )}
       <div className="mb-4">
-        <label className="block text-sm font-bold mb-2">Foto del Producto</label>
+        <label className="block text-lg font-bold mb-2">Foto del Producto</label>
 
       {/* Previsualización */}
       <div className="w-full h-48 bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300">
         {subiendo ? (
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-2"></div>
-            <p className="text-sm text-gray-600">Subiendo imagen...</p>
+            <p className="text-lg text-gray-600">Subiendo imagen...</p>
           </div>
         ) : previsualizacion ? (
           <img
@@ -66,7 +66,7 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
         ) : (
           <div className="text-center text-gray-400">
             <span className="text-5xl">📷</span>
-            <p className="text-sm mt-2">Sin imagen</p>
+            <p className="text-lg mt-2">Sin imagen</p>
           </div>
         )}
       </div>
@@ -100,7 +100,7 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
         )}
       </div>
 
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-base text-gray-500 mt-2">
         Formatos: JPG, PNG, WebP • Máx: 10MB
       </p>
     </div>
