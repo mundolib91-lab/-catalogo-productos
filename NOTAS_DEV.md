@@ -24,49 +24,57 @@
 
 ## 🔧 Workflow de Desarrollo (Como en Flutter)
 
+### Configuración actual:
+- **Tu desarrollo local** → Usa backend de desarrollo en Railway
+- **Usuarios finales** → Usan backend de producción en Railway
+- **Base de datos Supabase** → Compartida (mismos datos en dev y prod)
+
 ### Para trabajar en nuevas funcionalidades:
 
 ```bash
-# 1. Cambiar a rama dev
+# 1. Asegúrate de estar en rama dev
 git checkout dev
 
-# 2. Hacer cambios en el código y probar localmente
-# (npm run dev en frontend, npm run dev en backend)
+# 2. Inicia el frontend local
+cd frontend
+npm run dev
+# Se abrirá en: http://localhost:5173 o http://192.168.0.32:5173
 
-# 3. Subir cambios a dev (NO afecta producción)
+# 3. Prueba en tu celular
+# - Conéctate a la misma WiFi
+# - Abre: http://192.168.0.32:5173
+# - Instala la app desde el menú del navegador
+# - El backend usa: https://catalogo-productos-development.up.railway.app/api
+
+# 4. Cuando todo funcione bien, sube los cambios a dev
 git add .
 git commit -m "Descripción clara del cambio"
 git push origin dev
 
-# 4. Cuando todo funcione bien, pasar a producción
+# 5. (OPCIONAL) Verifica en preview deployment
+# URL: https://catalogo-productos-git-dev-mundolib91-labs-projects.vercel.app
+# Requiere autenticación de Vercel
+
+# 6. Cuando esté 100% probado, pasar a producción
 git checkout master
 git merge dev
 git push origin master
 ```
 
-**IMPORTANTE:** Los cambios en `master` afectan INMEDIATAMENTE a todos los usuarios.
+**IMPORTANTE:** Los cambios en `master` se despliegan automáticamente y afectan a todos los usuarios.
 
 ---
 
 ## ⚠️ TAREAS PENDIENTES
 
-### 1. Configurar Railway para rama dev:
-   - Ir a Railway dashboard: https://railway.app
-   - Settings → Environments → New Environment
-   - Nombre: `development`
-   - Branch: `dev`
-   - Esto creará una URL separada para desarrollo
+### Próximas funcionalidades a desarrollar:
+- 📦 Vista de Inventario
+- 🛒 Vista de Compras
 
-### 2. Actualizar .env local para usar Railway:
-
-   Archivo: `frontend/.env`
-   ```env
-   # Cambiar esta línea:
-   VITE_API_URL=http://192.168.0.32:5000/api
-
-   # Por esta (para usar Railway en producción):
-   VITE_API_URL=https://catalogo-productos-production-9459.up.railway.app/api
-   ```
+### Mejoras técnicas:
+- Considerar separar base de datos dev/prod si es necesario (actualmente compartida)
+- Agregar tests automatizados
+- Configurar CI/CD más robusto
 
 ---
 
@@ -96,11 +104,20 @@ La app es **UNA SOLA aplicación** con menú hamburguesa que contiene todas las 
 
 ## 📲 Cómo Instalar la App en Celular
 
-### Para desarrollo local (red WiFi):
-URL: `http://192.168.0.32:5173`
+### Tendrás 2 apps instaladas en tu celular:
 
-### Para producción (desde cualquier lugar):
-URL: `https://catalogo-productos-vert.vercel.app`
+#### 1. 📱 App de PRODUCCIÓN (usuarios finales)
+- **URL**: `https://catalogo-productos-vert.vercel.app`
+- **Ícono**: Amarillo con "R" (Registro)
+- **Nombre sugerido**: "Mundo Lib"
+- **Uso**: La que usan los demás usuarios, siempre funciona bien
+
+#### 2. 🔧 App de DESARROLLO (solo para ti)
+- **URL**: `http://192.168.0.32:5173` (requiere estar en WiFi)
+- **Ícono**: Amarillo con "R" (igual, pero es otra app)
+- **Nombre sugerido**: "Mundo Lib DEV"
+- **Uso**: Para probar cambios antes de subirlos a producción
+- **Nota**: Si tu PC está apagada o no estás en WiFi, esta app no funcionará
 
 ### Instalación en Android:
 1. Abrir la URL en Chrome
@@ -127,34 +144,45 @@ URL: `https://catalogo-productos-vert.vercel.app`
 
 ## 🚀 URLs Importantes
 
-### Producción:
+### 🟢 Producción (rama master):
 - **Frontend**: https://catalogo-productos-vert.vercel.app
-- **Backend API**: https://catalogo-productos-production-9459.up.railway.app
-- **Base de datos**: Panel de Supabase
+- **Backend API**: https://catalogo-productos-production-9459.up.railway.app/api
+- **Base de datos**: Supabase (compartida con desarrollo)
+- **Uso**: Lo que usan los usuarios finales
 
-### Dashboards:
+### 🟡 Desarrollo (rama dev):
+- **Frontend Local**: http://192.168.0.32:5173 (para probar en celular vía WiFi)
+- **Frontend Preview**: https://catalogo-productos-git-dev-mundolib91-labs-projects.vercel.app (requiere auth)
+- **Backend API**: https://catalogo-productos-development.up.railway.app/api
+- **Base de datos**: Supabase (compartida con producción)
+- **Uso**: Para probar cambios sin afectar usuarios
+
+### 🔧 Dashboards:
 - **GitHub**: https://github.com/mundolib91-lab/-catalogo-productos
 - **Vercel**: https://vercel.com/dashboard
 - **Railway**: https://railway.app
 - **Supabase**: https://supabase.com/dashboard
 - **Cloudinary**: https://cloudinary.com/console
 
-### Desarrollo local:
+### 💻 Desarrollo local:
 - **Frontend dev**: http://localhost:5173 o http://192.168.0.32:5173
-- **Backend dev**: http://localhost:5000
+- **Backend dev**: http://localhost:5000 (opcional, puede usar Railway)
 
 ---
 
 ## 🔐 Variables de Entorno
 
-### Frontend (`frontend/.env`):
+### Frontend LOCAL (`frontend/.env`):
 ```env
-VITE_API_URL=https://catalogo-productos-production-9459.up.railway.app/api
+# Tu desarrollo local usa el backend de DESARROLLO
+VITE_API_URL=https://catalogo-productos-development.up.railway.app/api
 VITE_SUPABASE_URL=https://zpvtovhomaykvcowbtda.supabase.co
 VITE_SUPABASE_ANON_KEY=[Tu clave de Supabase]
 VITE_CLOUDINARY_CLOUD_NAME=ddkuwch5y
 VITE_CLOUDINARY_UPLOAD_PRESET=productos-mundolib
 ```
+
+**Nota:** Este archivo NO se sube a Git (está en .gitignore). Cada desarrollador puede tener su propia configuración.
 
 ### Backend (`backend/.env`):
 ```env
@@ -235,9 +263,11 @@ PORT=5000
 
 ---
 
-**Última actualización:** 2026-01-23
+**Última actualización:** 2026-01-24
 **Rama actual al guardar:** dev
 **Cambios recientes:**
-- Creación de rama dev para separar desarrollo/producción
-- Consolidación de documentación
-- Agregada sección de decisiones técnicas (Cloudinary vs Supabase Storage)
+- ✅ Configuración completa de environments dev/prod
+- ✅ Railway: 2 environments (production y development)
+- ✅ Vercel: Variables de entorno separadas por ambiente
+- ✅ `.env` local configurado para usar backend de desarrollo
+- ✅ Workflow de desarrollo documentado
