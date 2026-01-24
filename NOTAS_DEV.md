@@ -75,16 +75,21 @@ git push origin master
 - ✅ Botón flotante [+] en Vista Atención
 - ✅ Menú emergente con 2 opciones (Producto Nuevo / Grupo Repisa)
 
-**SESIÓN 2 (Pendiente):**
-- [ ] Formulario Producto Nuevo (foto + descripción + prioridad + notas)
-- [ ] Formulario Grupo/Repisa (foto repisa + descripción + prioridad)
-- [ ] Botón "Reportar Faltante" en cada card de producto (Tipo 1: Existente)
-- [ ] Endpoints backend para crear faltantes
+**SESIÓN 2 (✅ Completada):**
+- ✅ Formulario Producto Nuevo (foto + descripción + prioridad + notas)
+- ✅ Formulario Grupo/Repisa (foto repisa + descripción + prioridad)
+- ✅ Botón "Reportar Faltante" en cada card de producto (Tipo 1: Existente)
+- ✅ Endpoints backend para crear faltantes
+- ✅ Fix: Corregido nombre de prop onImagenCambiada en SelectorImagen
 
-**SESIÓN 3 (Pendiente):**
-- [ ] Vista Central Faltantes (gestión completa)
-- [ ] Estados: Reportado → Verificación → Confirmado → Compras → Pedido → Recibido → Archivado
-- [ ] Timeline de cambios de estado
+**SESIÓN 3 (✅ Completada):**
+- ✅ Vista Central Faltantes (gestión completa)
+- ✅ Estados: Reportado → Verificación → Confirmado → Compras → Pedido → Recibido → Archivado
+- ✅ Tabs de navegación por estados con contadores
+- ✅ Filtros por tipo, origen y prioridad
+- ✅ Cambio manual de estados con botón
+- ✅ Cards con badges informativos y cálculo de tiempo en estado
+- ✅ Integración en App.jsx y MenuHamburguesa.jsx
 - [ ] Filtros avanzados
 - [ ] Permisos por rol
 
@@ -324,3 +329,5 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - ✅ Documentado problema de Firewall y solución para acceso desde celular
 - ✅ **Tamaños de fuente aumentados globalmente** (18px texto regular, 24px títulos) para mejor legibilidad
 - ✅ **SESIÓN 1 Sistema Faltantes:** Tabla en Supabase + Botón flotante [+] + Menú emergente
+- ✅ **SESIÓN 2 Sistema Faltantes:** Formularios Producto Nuevo + Grupo/Repisa + Backend endpoints
+- ✅ **SESIÓN 3 Sistema Faltantes:** Vista Central Faltantes con gestión completa de estados y filtros
