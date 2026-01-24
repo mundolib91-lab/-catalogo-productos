@@ -6,6 +6,8 @@ import UsosProducto from '../components/UsosProducto';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import MenuReportarFaltantes from '../components/MenuReportarFaltantes';
+import FormularioProductoNuevo from '../components/FormularioProductoNuevo';
+import FormularioGrupoRepisa from '../components/FormularioGrupoRepisa';
 
 function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
@@ -25,6 +27,8 @@ function Atencion({ menuHamburguesa }) {
 
   // Menu reportar faltantes
   const [menuFaltantesAbierto, setMenuFaltantesAbierto] = useState(false);
+  const [formularioNuevoAbierto, setFormularioNuevoAbierto] = useState(false);
+  const [formularioGrupoAbierto, setFormularioGrupoAbierto] = useState(false);
 
   useEffect(() => {
     cargarProductos();
@@ -71,10 +75,37 @@ function Atencion({ menuHamburguesa }) {
 
   const reportarFaltante = async (productoId) => {
     try {
-      await reportarFaltanteAPI(productoId);
+      // Buscar el producto en la lista actual
+      const producto = productos.find(p => p.id === productoId);
+      if (!producto) {
+        mostrarError('Producto no encontrado');
+        return;
+      }
+
+      // Crear faltante tipo 'existente'
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/faltantes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: 'existente',
+          producto_id: productoId,
+          descripcion: producto.descripcion || producto.nombre,
+          imagen: producto.imagen,
+          prioridad: 'alta', // Por defecto alta para productos existentes
+          origen: 'atencion_cliente'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al reportar faltante');
+      }
+
       success('Faltante reportado correctamente');
       cargarProductos();
     } catch (error) {
+      console.error('Error:', error);
       mostrarError('Error al reportar faltante');
     }
   };
@@ -82,13 +113,40 @@ function Atencion({ menuHamburguesa }) {
   const handleSeleccionarTipoFaltante = (tipo) => {
     setMenuFaltantesAbierto(false);
 
-    // TODO: Abrir formulario según el tipo
     if (tipo === 'nuevo') {
-      console.log('Abrir formulario Producto Nuevo');
-      // Próxima sesión: Abrir modal con formulario
+      setFormularioNuevoAbierto(true);
     } else if (tipo === 'grupo') {
-      console.log('Abrir formulario Grupo/Repisa');
-      // Próxima sesión: Abrir modal con formulario
+      setFormularioGrupoAbierto(true);
+    }
+  };
+
+  const handleSubmitFaltante = async (dataFaltante) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/faltantes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...dataFaltante,
+          origen: 'atencion_cliente'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al reportar faltante');
+      }
+
+      success('Faltante reportado exitosamente');
+
+      // Recargar productos si estaba en filtro de faltantes
+      if (soloFaltantes) {
+        cargarProductos();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al reportar faltante');
+      throw error;
     }
   };
 
@@ -232,6 +290,20 @@ function Atencion({ menuHamburguesa }) {
       isOpen={menuFaltantesAbierto}
       onClose={() => setMenuFaltantesAbierto(false)}
       onSelectTipo={handleSeleccionarTipoFaltante}
+    />
+
+    {/* Formulario Producto Nuevo */}
+    <FormularioProductoNuevo
+      isOpen={formularioNuevoAbierto}
+      onClose={() => setFormularioNuevoAbierto(false)}
+      onSubmit={handleSubmitFaltante}
+    />
+
+    {/* Formulario Grupo/Repisa */}
+    <FormularioGrupoRepisa
+      isOpen={formularioGrupoAbierto}
+      onClose={() => setFormularioGrupoAbierto(false)}
+      onSubmit={handleSubmitFaltante}
     />
     </>
   );
