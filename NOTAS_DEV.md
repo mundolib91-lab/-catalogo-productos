@@ -67,7 +67,28 @@ git push origin master
 
 ## ⚠️ TAREAS PENDIENTES
 
-### Próximas funcionalidades a desarrollar:
+### 🔴 Sistema de Reportes de Faltantes (EN PROGRESO):
+
+**SESIÓN 1 (Completada):** ✅
+- ✅ Tabla `faltantes` en Supabase
+- ✅ Tabla `faltantes_historial` para timeline
+- ✅ Botón flotante [+] en Vista Atención
+- ✅ Menú emergente con 2 opciones (Producto Nuevo / Grupo Repisa)
+
+**SESIÓN 2 (Pendiente):**
+- [ ] Formulario Producto Nuevo (foto + descripción + prioridad + notas)
+- [ ] Formulario Grupo/Repisa (foto repisa + descripción + prioridad)
+- [ ] Botón "Reportar Faltante" en cada card de producto (Tipo 1: Existente)
+- [ ] Endpoints backend para crear faltantes
+
+**SESIÓN 3 (Pendiente):**
+- [ ] Vista Central Faltantes (gestión completa)
+- [ ] Estados: Reportado → Verificación → Confirmado → Compras → Pedido → Recibido → Archivado
+- [ ] Timeline de cambios de estado
+- [ ] Filtros avanzados
+- [ ] Permisos por rol
+
+### Próximas funcionalidades generales:
 - 📦 Vista de Inventario
 - 🛒 Vista de Compras
 
@@ -302,3 +323,4 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - ✅ Confirmado: App de producción instalable sin problemas
 - ✅ Documentado problema de Firewall y solución para acceso desde celular
 - ✅ **Tamaños de fuente aumentados globalmente** (18px texto regular, 24px títulos) para mejor legibilidad
+- ✅ **SESIÓN 1 Sistema Faltantes:** Tabla en Supabase + Botón flotante [+] + Menú emergente
