@@ -104,7 +104,7 @@ function FormularioProductoNuevo({ isOpen, onClose, onSubmit }) {
             </p>
             <SelectorImagen
               imagenActual={formData.imagen}
-              onImagenSeleccionada={handleImagenSeleccionada}
+              onImagenCambiada={handleImagenSeleccionada}
             />
             {errores.imagen && (
               <p className="text-red-600 dark:text-red-400 text-base mt-2">{errores.imagen}</p>

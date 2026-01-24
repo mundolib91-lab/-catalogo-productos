@@ -6,6 +6,7 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
   const opciones = [
     { id: 'registro', nombre: 'Registro de Productos', icono: '📝', color: 'amber' },
     { id: 'atencion', nombre: 'Atención al Cliente', icono: '👥', color: 'blue' },
+    { id: 'faltantes', nombre: 'Central Faltantes', icono: '🔴', color: 'red' },
     { id: 'inventario', nombre: 'Inventario', icono: '📦', color: 'green', proximamente: true },
     { id: 'compras', nombre: 'Compras', icono: '🛒', color: 'purple', proximamente: true }
   ];
