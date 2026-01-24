@@ -241,9 +241,20 @@ PORT=5000
 - Si persiste, desinstalar y reinstalar
 
 ### "No veo la opción de instalar":
-- Asegurarse de usar HTTPS en producción
-- En Safari (iPhone) usar el botón de Compartir
-- En Chrome (Android) buscar en menú "Instalar app"
+- **En PRODUCCIÓN (HTTPS)**: La opción SIEMPRE está disponible ✅
+  - Android: Banner automático o menú ⋮ → "Instalar aplicación"
+  - iPhone: Botón Compartir → "Agregar a pantalla de inicio"
+- **En DESARROLLO (HTTP local)**: Puede no estar disponible por limitaciones del navegador
+  - Solución: Usar desde navegador sin instalar (funciona igual para desarrollo)
+
+### "No puedo acceder desde el celular al servidor local":
+- Verificar que ambos dispositivos estén en la misma red WiFi
+- **Firewall de Windows** puede bloquear el puerto 5173:
+  1. Presiona `Windows + R`
+  2. Escribe `wf.msc` y presiona Enter
+  3. "Reglas de entrada" → "Nueva regla..."
+  4. Puerto → TCP → 5173 → Permitir → Finalizar
+  5. Nombre: "Vite Dev Server"
 
 ### "Error al subir imágenes":
 - ✅ Usar Cloudinary (NO Supabase Storage)
@@ -271,3 +282,6 @@ PORT=5000
 - ✅ Vercel: Variables de entorno separadas por ambiente
 - ✅ `.env` local configurado para usar backend de desarrollo
 - ✅ Workflow de desarrollo documentado
+- ✅ Hot reload probado y funcionando
+- ✅ Confirmado: App de producción instalable sin problemas
+- ✅ Documentado problema de Firewall y solución para acceso desde celular
