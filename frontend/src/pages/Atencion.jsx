@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import MenuReportarFaltantes from '../components/MenuReportarFaltantes';
 import FormularioProductoNuevo from '../components/FormularioProductoNuevo';
 import FormularioGrupoRepisa from '../components/FormularioGrupoRepisa';
+import FormularioReportarExistente from '../components/FormularioReportarExistente';
 
 function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
@@ -29,6 +30,8 @@ function Atencion({ menuHamburguesa }) {
   const [menuFaltantesAbierto, setMenuFaltantesAbierto] = useState(false);
   const [formularioNuevoAbierto, setFormularioNuevoAbierto] = useState(false);
   const [formularioGrupoAbierto, setFormularioGrupoAbierto] = useState(false);
+  const [formularioExistenteAbierto, setFormularioExistenteAbierto] = useState(false);
+  const [productoAReportar, setProductoAReportar] = useState(null);
 
   useEffect(() => {
     cargarProductos();
@@ -73,7 +76,19 @@ function Atencion({ menuHamburguesa }) {
     }
   };
 
-  const reportarFaltante = async (productoId) => {
+  const abrirFormularioReportarExistente = (productoId) => {
+    // Buscar el producto en la lista actual
+    const producto = productos.find(p => p.id === productoId);
+    if (!producto) {
+      mostrarError('Producto no encontrado');
+      return;
+    }
+
+    setProductoAReportar(producto);
+    setFormularioExistenteAbierto(true);
+  };
+
+  const reportarFaltante = async ({ productoId, prioridad, notas }) => {
     try {
       // Buscar el producto en la lista actual
       const producto = productos.find(p => p.id === productoId);
@@ -93,7 +108,8 @@ function Atencion({ menuHamburguesa }) {
           producto_id: productoId,
           descripcion: producto.descripcion || producto.nombre,
           imagen: producto.imagen,
-          prioridad: 'alta', // Por defecto alta para productos existentes
+          prioridad: prioridad,
+          notas: notas,
           origen: 'atencion_cliente'
         }),
       });
@@ -252,7 +268,7 @@ function Atencion({ menuHamburguesa }) {
                 producto={producto}
                 onVerDetalles={() => setProductoDetalle(producto)}
                 onVerUsos={() => setProductoUsos(producto)}
-                onReportarFaltante={() => reportarFaltante(producto.id)}
+                onReportarFaltante={() => abrirFormularioReportarExistente(producto.id)}
               />
             ))}
           </div>
@@ -304,6 +320,17 @@ function Atencion({ menuHamburguesa }) {
       isOpen={formularioGrupoAbierto}
       onClose={() => setFormularioGrupoAbierto(false)}
       onSubmit={handleSubmitFaltante}
+    />
+
+    {/* Formulario Reportar Producto Existente */}
+    <FormularioReportarExistente
+      isOpen={formularioExistenteAbierto}
+      onClose={() => {
+        setFormularioExistenteAbierto(false);
+        setProductoAReportar(null);
+      }}
+      producto={productoAReportar}
+      onSubmit={reportarFaltante}
     />
     </>
   );
@@ -381,11 +408,11 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
             disabled={yaReportado}
             className={`py-1 rounded font-bold text-base transition-colors ${
               yaReportado
-                ? 'bg-red-800 dark:bg-red-900 text-white cursor-not-allowed opacity-75'
-                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
+                ? 'bg-red-400 dark:bg-red-500 text-white cursor-not-allowed opacity-90'
+                : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
             }`}
           >
-            {yaReportado ? 'Reportado' : 'Faltante'}
+            {yaReportado ? '⚠️ Reportado' : 'Reportar'}
           </button>
         </div>
       </div>
