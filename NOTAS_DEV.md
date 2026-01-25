@@ -145,6 +145,13 @@ git push origin master
 - ✅ Actualización masiva en todos los productos
 - ✅ Mantener datos limpios y consistentes
 
+### 📌 Nota sobre estados:
+**Cambio de flujo: Completados → Existentes es MANUAL**
+- Antes: Automático después de 2 días ❌
+- Ahora: Manual con botón "→ Existente" ✅
+- Utilidad Completados: Historial de compras recientes
+- Endpoint: PUT /api/productos/:id/pasar-existente
+
 ---
 
 ## 📦 SISTEMA DE REGISTRO POR LOTES (✅ COMPLETADO):

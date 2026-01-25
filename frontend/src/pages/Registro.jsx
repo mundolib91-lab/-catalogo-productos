@@ -607,23 +607,64 @@ function ProductoEnProceso({ producto, onActualizar, colorFondo }) {
 
 // Componente para productos completados
 function ProductoCompletado({ producto, onActualizar, colorFondo }) {
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [mostrarVerEditar, setMostrarVerEditar] = useState(false);
+  const [moviendoAExistente, setMoviendoAExistente] = useState(false);
+
+  const handlePasarAExistente = async () => {
+    setMoviendoAExistente(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/productos/${producto.id}/pasar-existente`, {
+        method: 'PUT'
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al mover a existente');
+      }
+
+      success('Producto movido a Existente correctamente');
+      setTimeout(() => {
+        onActualizar();
+      }, 1000);
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al mover producto');
+    } finally {
+      setMoviendoAExistente(false);
+    }
+  };
 
   return (
     <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
       <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
         <p className="text-lg">✅ Registro completo</p>
         <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
           Completado: {new Date(producto.fecha_completado).toLocaleDateString()}
         </p>
       </div>
-      <button
-        onClick={() => setMostrarVerEditar(true)}
-        className="w-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-bold hover:bg-purple-200 dark:hover:bg-purple-900/60"
-      >
-        Ver Detalles
-      </button>
-      <p className="text-base text-gray-500 dark:text-gray-400 text-center mt-2">Se queda aquí 2 días</p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setMostrarVerEditar(true)}
+          className="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-bold hover:bg-purple-200 dark:hover:bg-purple-900/60 text-base"
+        >
+          👁️ Ver
+        </button>
+        <button
+          onClick={handlePasarAExistente}
+          disabled={moviendoAExistente}
+          className="bg-green-500 dark:bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 text-base"
+        >
+          {moviendoAExistente ? '⏳' : '→ Existente'}
+        </button>
+      </div>
 
       {mostrarVerEditar && (
         <VerEditarProducto

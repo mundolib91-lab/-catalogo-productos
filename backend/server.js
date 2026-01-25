@@ -426,7 +426,41 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
   }
 });
 
-// 9. Completar registro de producto (de proceso a completado)
+// 9. Mover producto de completado a existente (MANUAL)
+app.put('/api/productos/:id/pasar-existente', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`→ Moviendo producto ${id} de Completado a Existente`);
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({
+        estado_registro: 'existente',
+        fecha_existente: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('estado_registro', 'completado') // Solo si está completado
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(400).json({
+        success: false,
+        error: 'El producto no está en estado completado'
+      });
+    }
+
+    console.log(`✅ Producto ${id} movido a Existente`);
+    res.json({ success: true, data, message: 'Producto disponible en Existentes' });
+  } catch (error) {
+    console.error('❌ Error al mover a existente:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 10. Completar registro de producto (de proceso a completado)
 app.put('/api/productos/:id/completar', async (req, res) => {
   try {
     const { id } = req.params;
