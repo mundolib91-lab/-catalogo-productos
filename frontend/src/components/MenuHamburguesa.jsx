@@ -7,8 +7,9 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
     { id: 'registro', nombre: 'Registro de Productos', icono: '📝', color: 'amber' },
     { id: 'atencion', nombre: 'Atención al Cliente', icono: '👥', color: 'blue' },
     { id: 'faltantes', nombre: 'Central Faltantes', icono: '🔴', color: 'red' },
+    { id: 'gestion', nombre: 'Gestión de Datos', icono: '⚙️', color: 'purple' },
     { id: 'inventario', nombre: 'Inventario', icono: '📦', color: 'green', proximamente: true },
-    { id: 'compras', nombre: 'Compras', icono: '🛒', color: 'purple', proximamente: true }
+    { id: 'compras', nombre: 'Compras', icono: '🛒', color: 'indigo', proximamente: true }
   ];
 
   const handleSeleccionar = (id) => {

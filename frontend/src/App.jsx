@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Registro from './pages/Registro';
 import Atencion from './pages/Atencion';
 import CentralFaltantes from './pages/CentralFaltantes';
+import GestionDatos from './pages/GestionDatos';
 import MenuHamburguesa from './components/MenuHamburguesa';
 
 function App() {
@@ -12,7 +13,7 @@ function App() {
     // Detectar parámetro ?view en la URL (para PWA individual)
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
-    if (view === 'atencion' || view === 'registro' || view === 'faltantes') {
+    if (view === 'atencion' || view === 'registro' || view === 'faltantes' || view === 'gestion') {
       setVistaActual(view);
     }
 
@@ -33,6 +34,8 @@ function App() {
           <Atencion menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         ) : vistaActual === 'faltantes' ? (
           <CentralFaltantes menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
+        ) : vistaActual === 'gestion' ? (
+          <GestionDatos menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         ) : (
           <Registro menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         )}
@@ -85,6 +88,17 @@ function App() {
             </button>
 
             <button
+              onClick={() => setVistaActual('gestion')}
+              className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-colors ${
+                vistaActual === 'gestion'
+                  ? 'bg-purple-500 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              ⚙️ Gestión de Datos
+            </button>
+
+            <button
               className="w-full text-left px-4 py-3 rounded-lg font-semibold text-gray-400 dark:text-gray-600 cursor-not-allowed"
               disabled
             >
@@ -105,7 +119,15 @@ function App() {
 
       {/* Contenido principal */}
       <div className="flex-1 overflow-auto">
-        {vistaActual === 'atencion' ? <Atencion /> : vistaActual === 'faltantes' ? <CentralFaltantes /> : <Registro />}
+        {vistaActual === 'atencion' ? (
+          <Atencion />
+        ) : vistaActual === 'faltantes' ? (
+          <CentralFaltantes />
+        ) : vistaActual === 'gestion' ? (
+          <GestionDatos />
+        ) : (
+          <Registro />
+        )}
       </div>
     </div>
   );

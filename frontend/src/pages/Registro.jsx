@@ -6,19 +6,41 @@ import SelectorImagen from '../components/SelectorImagen';
 import { useTheme } from '../hooks/useTheme';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import MenuRegistro from '../components/MenuRegistro';
+import FormularioLoteProveedor from '../components/FormularioLoteProveedor';
+import FormularioLoteMarca from '../components/FormularioLoteMarca';
 
 function Registro({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [pestanaActiva, setPestanaActiva] = useState('existentes');
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
+  // Nuevos estados para registro por lotes
+  const [menuRegistroAbierto, setMenuRegistroAbierto] = useState(false);
+  const [formularioLoteProveedorAbierto, setFormularioLoteProveedorAbierto] = useState(false);
+  const [formularioLoteMarcaAbierto, setFormularioLoteMarcaAbierto] = useState(false);
+
+  // Filtros
+  const [filtroProveedor, setFiltroProveedor] = useState('');
+  const [filtroMarca, setFiltroMarca] = useState('');
+  const [filtroOrden, setFiltroOrden] = useState('recientes'); // 'recientes' o 'antiguos'
+  const [proveedores, setProveedores] = useState([]);
+  const [marcas, setMarcas] = useState([]);
+
   // Cargar productos según pestaña activa
   useEffect(() => {
     cargarProductos();
-  }, [pestanaActiva, busqueda]);
+  }, [pestanaActiva, busqueda, filtroProveedor, filtroMarca, filtroOrden]);
+
+  // Cargar proveedores y marcas al montar
+  useEffect(() => {
+    cargarProveedores();
+    cargarMarcas();
+  }, []);
 
   const cargarProductos = async () => {
     setLoading(true);
@@ -26,11 +48,102 @@ function Registro({ menuHamburguesa }) {
       const response = await getProductosPorEstado(pestanaActiva, {
         search: busqueda
       });
-      setProductos(response.data || []);
+
+      let productosData = response.data || [];
+
+      // Aplicar filtro por proveedor
+      if (filtroProveedor && filtroProveedor !== '') {
+        productosData = productosData.filter(p => p.proveedor === filtroProveedor);
+      }
+
+      // Aplicar filtro por marca
+      if (filtroMarca && filtroMarca !== '') {
+        productosData = productosData.filter(p => p.marca === filtroMarca);
+      }
+
+      // Aplicar ordenamiento
+      if (filtroOrden === 'recientes') {
+        productosData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      } else {
+        productosData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      }
+
+      setProductos(productosData);
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarProveedores = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/productos/proveedores`);
+      const data = await response.json();
+      if (data.success) {
+        setProveedores(data.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar proveedores:', error);
+    }
+  };
+
+  const cargarMarcas = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/productos/marcas`);
+      const data = await response.json();
+      if (data.success) {
+        setMarcas(data.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar marcas:', error);
+    }
+  };
+
+  const limpiarFiltros = () => {
+    setFiltroProveedor('');
+    setFiltroMarca('');
+    setFiltroOrden('recientes');
+  };
+
+  const handleSeleccionarTipoRegistro = (tipo) => {
+    setMenuRegistroAbierto(false);
+
+    if (tipo === 'individual') {
+      setMostrarFormulario(true);
+    } else if (tipo === 'proveedor') {
+      setFormularioLoteProveedorAbierto(true);
+    } else if (tipo === 'marca') {
+      setFormularioLoteMarcaAbierto(true);
+    }
+  };
+
+  const handleSubmitLote = async (dataLote) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/productos/lote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: dataLote.proveedor ? 'proveedor' : 'marca',
+          proveedor: dataLote.proveedor,
+          marca: dataLote.marca,
+          productos: dataLote.productos
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al guardar lote');
+      }
+
+      const result = await response.json();
+      success(`${result.data.length} productos guardados correctamente`);
+      cargarProductos();
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al guardar lote de productos');
+      throw error;
     }
   };
 
@@ -42,7 +155,7 @@ function Registro({ menuHamburguesa }) {
         {menuHamburguesa}
 
         <h1 className="text-2xl md:text-2xl font-bold text-center">
-          APP REGISTROS DE PRODUCTOS
+          REGISTRO DE PRODUCTOS
         </h1>
 
         {/* Botón de tema */}
@@ -107,6 +220,95 @@ function Registro({ menuHamburguesa }) {
         </div>
       </div>
 
+      {/* Filtros */}
+      <div className="max-w-6xl mx-auto px-4 mt-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+              🔍 Filtros
+            </h3>
+            {(filtroProveedor || filtroMarca || filtroOrden !== 'recientes') && (
+              <button
+                onClick={limpiarFiltros}
+                className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+              >
+                ✕ Limpiar todos
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Filtro por Proveedor */}
+            {proveedores.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Proveedor
+                </label>
+                <select
+                  value={filtroProveedor}
+                  onChange={(e) => setFiltroProveedor(e.target.value)}
+                  className="w-full px-3 py-2 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">📦 Todos</option>
+                  {proveedores.map((prov, index) => (
+                    <option key={index} value={prov}>
+                      {prov}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Filtro por Marca */}
+            {marcas.length > 0 && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Marca
+                </label>
+                <select
+                  value={filtroMarca}
+                  onChange={(e) => setFiltroMarca(e.target.value)}
+                  className="w-full px-3 py-2 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">🏷️ Todas</option>
+                  {marcas.map((marca, index) => (
+                    <option key={index} value={marca}>
+                      {marca}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Filtro por Orden */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Ordenar por
+              </label>
+              <select
+                value={filtroOrden}
+                onChange={(e) => setFiltroOrden(e.target.value)}
+                className="w-full px-3 py-2 text-base border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="recientes">📅 Más recientes primero</option>
+                <option value="antiguos">🕐 Más antiguos primero</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Contador de resultados */}
+          {!loading && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando <span className="font-bold text-gray-800 dark:text-white">{productos.length}</span> producto{productos.length !== 1 ? 's' : ''}
+                {filtroProveedor && <span> • Proveedor: <span className="font-semibold">{filtroProveedor}</span></span>}
+                {filtroMarca && <span> • Marca: <span className="font-semibold">{filtroMarca}</span></span>}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Contenido según pestaña */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         {loading ? (
@@ -135,8 +337,8 @@ function Registro({ menuHamburguesa }) {
 
       {/* Botón flotante para agregar */}
       <button
-        onClick={() => setMostrarFormulario(true)}
-        className={`fixed bottom-8 right-8 w-16 h-16 rounded-full shadow-2xl text-white text-3xl font-bold flex items-center justify-center transition-transform hover:scale-110 ${
+        onClick={() => setMenuRegistroAbierto(true)}
+        className={`fixed bottom-8 right-8 w-16 h-16 rounded-full shadow-2xl text-white text-3xl font-bold flex items-center justify-center transition-transform hover:scale-110 z-30 ${
           pestanaActiva === 'existente'
             ? 'bg-green-500'
             : pestanaActiva === 'proceso'
@@ -147,7 +349,14 @@ function Registro({ menuHamburguesa }) {
         +
       </button>
 
-      {/* Modal formulario */}
+      {/* Menú de tipo de registro */}
+      <MenuRegistro
+        isOpen={menuRegistroAbierto}
+        onClose={() => setMenuRegistroAbierto(false)}
+        onSelectTipo={handleSeleccionarTipoRegistro}
+      />
+
+      {/* Modal formulario individual */}
       {mostrarFormulario && (
         <FormularioRapido
           onCerrar={() => setMostrarFormulario(false)}
@@ -155,6 +364,29 @@ function Registro({ menuHamburguesa }) {
             setMostrarFormulario(false);
             cargarProductos();
           }}
+        />
+      )}
+
+      {/* Formulario Lote por Proveedor */}
+      <FormularioLoteProveedor
+        isOpen={formularioLoteProveedorAbierto}
+        onClose={() => setFormularioLoteProveedorAbierto(false)}
+        onSubmitLote={handleSubmitLote}
+      />
+
+      {/* Formulario Lote por Marca */}
+      <FormularioLoteMarca
+        isOpen={formularioLoteMarcaAbierto}
+        onClose={() => setFormularioLoteMarcaAbierto(false)}
+        onSubmitLote={handleSubmitLote}
+      />
+
+      {/* Toast de notificaciones */}
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
         />
       )}
     </div>
@@ -266,22 +498,65 @@ function ProductoExistente({ producto, onActualizar }) {
 
 // Componente para productos en proceso
 function ProductoEnProceso({ producto, onActualizar, colorFondo }) {
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarConfirmarEliminar, setMostrarConfirmarEliminar] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+
+  const handleEliminar = async () => {
+    setEliminando(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/productos/${producto.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar producto');
+      }
+
+      success('Producto eliminado correctamente');
+      setTimeout(() => {
+        onActualizar();
+      }, 1000);
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al eliminar producto');
+    } finally {
+      setEliminando(false);
+      setMostrarConfirmarEliminar(false);
+    }
+  };
 
   return (
     <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
       <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
         <p className="text-lg">Cantidad: <span className="font-bold">{producto.cantidad_ingresada} unid</span></p>
       </div>
       <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-base p-2 rounded mb-3">
         ⚠️ FALTAN: Precios y datos completos
       </div>
-      <button
-        onClick={() => setMostrarFormulario(true)}
-        className="w-full bg-amber-500 dark:bg-amber-600 text-white py-2 rounded-lg font-bold hover:bg-amber-600 dark:hover:bg-amber-700"
-      >
-        Completar Registro
-      </button>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setMostrarFormulario(true)}
+          className="bg-amber-500 dark:bg-amber-600 text-white py-2 rounded-lg font-bold hover:bg-amber-600 dark:hover:bg-amber-700 text-base"
+        >
+          Completar
+        </button>
+        <button
+          onClick={() => setMostrarConfirmarEliminar(true)}
+          className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 py-2 rounded-lg font-bold hover:bg-red-200 dark:hover:bg-red-900/60 text-base"
+        >
+          🗑️ Eliminar
+        </button>
+      </div>
 
       {mostrarFormulario && (
         <FormularioCompleto
@@ -292,6 +567,39 @@ function ProductoEnProceso({ producto, onActualizar, colorFondo }) {
             onActualizar();
           }}
         />
+      )}
+
+      {mostrarConfirmarEliminar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+              ⚠️ Confirmar Eliminación
+            </h3>
+            <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+              ¿Estás seguro de eliminar este producto?
+              <br />
+              <span className="font-bold text-gray-800 dark:text-white">
+                {producto.descripcion || producto.nombre || 'Sin descripción'}
+              </span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setMostrarConfirmarEliminar(false)}
+                disabled={eliminando}
+                className="py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-bold hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEliminar}
+                disabled={eliminando}
+                className="py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg font-bold hover:bg-red-700 dark:hover:bg-red-800 disabled:opacity-50"
+              >
+                {eliminando ? 'Eliminando...' : 'Sí, Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

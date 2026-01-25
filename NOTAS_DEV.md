@@ -105,6 +105,172 @@ git push origin master
 
 ---
 
+## ⚙️ GESTIÓN DE PROVEEDORES Y MARCAS (✅ COMPLETADO):
+
+### Problema identificado:
+- Typos y errores al escribir proveedores/marcas (ej: "sharìe" en vez de "Sharpie")
+- No había forma de corregir estos errores
+- Cada error se propagaba a múltiples productos
+- No se podía ver cuántos productos tiene cada proveedor/marca
+
+### Solución implementada:
+
+**✅ Nueva Vista "Gestión de Datos":**
+- Ubicación: Menú hamburguesa → ⚙️ Gestión de Datos
+- Dos tabs: 🏢 Proveedores y 🏷️ Marcas
+- Muestra lista completa con contador de productos
+- Ejemplo: "madepa (2 productos)"
+
+**✅ Funcionalidad de Edición:**
+- Botón "✏️ Editar" en cada proveedor/marca
+- Campo de texto para modificar el nombre
+- Botón "✓ Guardar" actualiza TODOS los productos automáticamente
+- Mensaje de confirmación: "X productos actualizados"
+- Ideal para corregir typos y unificar nombres
+
+**✅ Componentes creados:**
+- `frontend/src/pages/GestionDatos.jsx` - Vista principal
+- Integrado en App.jsx y MenuHamburguesa.jsx
+
+**✅ Endpoints Backend:**
+- `GET /api/proveedores/estadisticas` - Lista con contador de productos
+- `GET /api/marcas/estadisticas` - Lista con contador de productos
+- `PUT /api/proveedores/:nombre/renombrar` - Renombrar en todos los productos
+- `PUT /api/marcas/:nombre/renombrar` - Renombrar en todos los productos
+
+### Beneficios:
+- ✅ Corregir errores de tipeo fácilmente
+- ✅ Unificar nombres duplicados (ej: "Faber Castell" y "Faber-Castell")
+- ✅ Ver estadísticas de uso por proveedor/marca
+- ✅ Actualización masiva en todos los productos
+- ✅ Mantener datos limpios y consistentes
+
+---
+
+## 📦 SISTEMA DE REGISTRO POR LOTES (✅ COMPLETADO):
+
+### Problema identificado:
+- Llegan compras en cajas/bolsas de un mismo proveedor (notas de compra)
+- Tenían que registrar productos uno por uno repitiendo el proveedor cada vez
+- Proceso lento y propenso a errores de tipeo
+- Similar con productos de la misma marca
+
+### Solución implementada:
+
+**✅ Menú de Tipo de Registro (MenuRegistro.jsx):**
+- Botón flotante [+] en Vista Registro abre menú con 3 opciones:
+  1. 📦 **Producto Individual** - Como antes (uno por uno)
+  2. 🏢 **Por Proveedor** ⭐ NUEVO - Registrar lote del mismo proveedor
+  3. 🏷️ **Por Marca** ⭐ NUEVO - Registrar lote de la misma marca
+
+**✅ FormularioLoteProveedor.jsx:**
+- **Paso 1:** Campo de texto libre con autocompletado para proveedor
+  - Pueden escribir nuevo proveedor o seleccionar uno existente
+  - Usa HTML5 `<datalist>` para sugerencias mientras escriben
+  - Muestra primeros 3 proveedores como referencia
+  - NO requiere formulario adicional para crear proveedores
+
+- **Paso 2:** Agregar productos al lote
+  - Formulario de producto SIN campo proveedor (ya está preseleccionado)
+  - Solo campo **Descripción es obligatorio** (asterisco rojo *)
+  - Campos opcionales: Foto, Nombre, Marca, Cantidad, Precio Compra, Precio Venta
+  - Botón "➕ Agregar al Lote" - sigue agregando sin cerrar
+  - Lista visual de productos agregados con opciones para eliminar
+  - Botón "✅ Finalizar Lote" - guarda todos de golpe
+  - Todos van a estado "Proceso" con el mismo proveedor
+
+**✅ FormularioLoteMarca.jsx:**
+- Similar a FormularioLoteProveedor pero para marca
+- Permite especificar proveedor individual en cada producto
+- Todos los productos comparten la misma marca
+
+**✅ Filtro por Proveedor en Vista Procesos:**
+- Selector de proveedor aparece solo en pestaña "⏳ En Proceso"
+- Dropdown con todos los proveedores que tienen productos en proceso
+- Filtra para mostrar solo productos de ese proveedor
+- Botón "✕ Limpiar" para quitar filtro
+- Perfecto para completar una "nota de compra" completa
+
+**✅ Endpoints Backend:**
+- `GET /api/productos/proveedores` - Lista de proveedores únicos
+- `GET /api/productos/marcas` - Lista de marcas únicas
+- `POST /api/productos/lote` - Crear múltiples productos en una transacción
+
+### Flujo de trabajo:
+1. Llega caja con productos del Proveedor X
+2. Click botón [+] → Elegir "Por Proveedor"
+3. Escribir "Proveedor X" (o seleccionar de sugerencias)
+4. Continuar → Llenar datos del producto 1 (solo descripción obligatoria) → "Agregar al Lote"
+5. Llenar producto 2 → "Agregar al Lote"
+6. ... agregar todos los de la caja
+7. "Finalizar Lote" → Todos van a "Proceso" con el mismo proveedor
+8. Ir a pestaña "Proceso" → Filtrar por "Proveedor X" → Completar toda la nota
+9. Click "Completar Registro" en cada producto para agregar precios finales
+
+### Beneficios:
+- ✅ Registro más rápido (no repiten proveedor/marca)
+- ✅ Menos errores de tipeo
+- ✅ Trabajo organizado por lotes (notas de compra)
+- ✅ No requiere formularios adicionales para proveedores/marcas
+- ✅ Autocompletado inteligente aprende de registros anteriores
+- ✅ Flexibilidad: solo descripción obligatoria, todo lo demás opcional
+
+### Correcciones y mejoras posteriores:
+- ✅ **Eliminado campo "nombre"** de formularios de lote (solo queda en formulario individual)
+- ✅ **SelectorImagen se limpia** correctamente después de agregar producto al lote
+- ✅ **Editar productos del lote** antes de finalizar
+- ✅ **Eliminar productos** del lote antes de finalizar
+- ✅ **Eliminar productos en estado Proceso** con confirmación
+- ✅ **Label duplicado "Foto del Producto"** corregido
+- ✅ **Normalización de datos** antes de guardar (previene errores)
+
+---
+
+## 🔍 SISTEMA DE FILTROS AVANZADOS (✅ COMPLETADO):
+
+### Problema identificado:
+- Solo había búsqueda por texto en Registro
+- No se podía filtrar por proveedor o marca
+- No se podía ordenar por fecha de registro
+
+### Solución implementada:
+
+**✅ Panel de Filtros Universal:**
+- Aparece en las 3 pestañas: Existente, Proceso, Completados
+- Diseño responsive: 3 columnas en desktop, 1 columna en móvil
+- Botón "✕ Limpiar todos" para resetear filtros
+
+**✅ Tres tipos de filtros:**
+1. **🏢 Filtro por Proveedor**
+   - Dropdown con todos los proveedores registrados
+   - Opción "📦 Todos" para ver todos
+
+2. **🏷️ Filtro por Marca**
+   - Dropdown con todas las marcas registradas
+   - Opción "🏷️ Todas" para ver todas
+
+3. **📅 Filtro por Orden**
+   - "📅 Más recientes primero" (default)
+   - "🕐 Más antiguos primero"
+
+**✅ Contador de Resultados:**
+- Muestra cantidad de productos filtrados
+- Indica filtros activos: "Mostrando 5 productos • Proveedor: madepa"
+
+**✅ Fix de Rutas Backend:**
+- Problema: Rutas `/api/productos/proveedores` y `/marcas` eran capturadas por `/api/productos/:id`
+- Solución: Reordenadas rutas específicas ANTES de rutas con parámetros `:id`
+- Ahora funciona correctamente
+
+### Beneficios:
+- ✅ Encontrar productos rápidamente por proveedor o marca
+- ✅ Trabajar por lotes (completar todos los productos de un proveedor)
+- ✅ Ver productos en orden cronológico (recientes o antiguos)
+- ✅ Combinar múltiples filtros simultáneamente
+- ✅ Experiencia consistente en todas las pestañas
+
+---
+
 ## ⚠️ TAREAS PENDIENTES
 
 ### Próximas funcionalidades:
@@ -333,9 +499,9 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-24
+**Última actualización:** 2026-01-25 (Sesión tarde)
 **Rama actual al guardar:** dev
-**Cambios recientes:**
+**Cambios recientes (SESIÓN 4):**
 - ✅ Configuración completa de environments dev/prod
 - ✅ Railway: 2 environments (production y development)
 - ✅ Vercel: Variables de entorno separadas por ambiente
@@ -350,3 +516,11 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - ✅ **SESIÓN 3 Sistema Faltantes:** Vista Central Faltantes con gestión completa de estados y filtros
 - ✅ **Mejoras Sistema Faltantes:** Formulario de confirmación al reportar existentes + Colores invertidos (verde/rojo)
 - ✅ **DEPLOY A PRODUCCIÓN:** Sistema completo de faltantes en https://vercel (rama master) - Funcional y probado
+- ✅ **SISTEMA REGISTRO POR LOTES:** MenuRegistro + FormularioLoteProveedor + FormularioLoteMarca
+- ✅ **Registro por Proveedor/Marca:** Autocompletado inteligente + Solo descripción obligatoria
+- ✅ **Correcciones Formularios Lote:** Campo nombre eliminado, editar productos, eliminar del lote
+- ✅ **SISTEMA DE FILTROS AVANZADOS:** Proveedor + Marca + Orden (3 pestañas)
+- ✅ **GESTIÓN DE DATOS:** Vista para editar proveedores/marcas y corregir typos masivamente
+- ✅ **Eliminar productos en Proceso:** Modal de confirmación
+- ✅ **Fix de Rutas Backend:** Endpoints específicos antes de :id
+- ✅ **Título corregido:** "APP REGISTROS" → "REGISTRO DE PRODUCTOS"

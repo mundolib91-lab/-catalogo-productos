@@ -18,6 +18,181 @@ const supabase = createClient(
 
 // ==================== ENDPOINTS ====================
 
+// ==================== RUTAS ESPECÍFICAS (DEBEN IR ANTES DE :id) ====================
+
+// Obtener lista de proveedores únicos
+app.get('/api/productos/proveedores', async (req, res) => {
+  console.log('🏢 Endpoint /api/productos/proveedores llamado');
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('proveedor')
+      .not('proveedor', 'is', null)
+      .order('proveedor');
+
+    if (error) throw error;
+
+    // Extraer valores únicos
+    const proveedoresUnicos = [...new Set(data.map(p => p.proveedor).filter(p => p && p.trim() !== ''))];
+
+    res.json({ success: true, data: proveedoresUnicos.sort() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener lista de marcas únicas
+app.get('/api/productos/marcas', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('marca')
+      .not('marca', 'is', null)
+      .order('marca');
+
+    if (error) throw error;
+
+    // Extraer valores únicos
+    const marcasUnicas = [...new Set(data.map(p => p.marca).filter(m => m && m.trim() !== ''))];
+
+    res.json({ success: true, data: marcasUnicas.sort() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener proveedores con estadísticas (cantidad de productos)
+app.get('/api/proveedores/estadisticas', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('proveedor')
+      .not('proveedor', 'is', null);
+
+    if (error) throw error;
+
+    // Contar productos por proveedor
+    const conteo = {};
+    data.forEach(p => {
+      if (p.proveedor && p.proveedor.trim()) {
+        conteo[p.proveedor] = (conteo[p.proveedor] || 0) + 1;
+      }
+    });
+
+    const resultado = Object.entries(conteo)
+      .map(([nombre, cantidad]) => ({ nombre, cantidad_productos: cantidad }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    res.json({ success: true, data: resultado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener marcas con estadísticas (cantidad de productos)
+app.get('/api/marcas/estadisticas', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('marca')
+      .not('marca', 'is', null);
+
+    if (error) throw error;
+
+    // Contar productos por marca
+    const conteo = {};
+    data.forEach(p => {
+      if (p.marca && p.marca.trim()) {
+        conteo[p.marca] = (conteo[p.marca] || 0) + 1;
+      }
+    });
+
+    const resultado = Object.entries(conteo)
+      .map(([nombre, cantidad]) => ({ nombre, cantidad_productos: cantidad }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    res.json({ success: true, data: resultado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Renombrar proveedor (actualiza todos los productos)
+app.put('/api/proveedores/:nombreViejo/renombrar', async (req, res) => {
+  try {
+    const { nombreViejo } = req.params;
+    const { nombreNuevo } = req.body;
+
+    console.log(`📝 Renombrando proveedor "${nombreViejo}" → "${nombreNuevo}"`);
+
+    if (!nombreNuevo || nombreNuevo.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'El nombre nuevo no puede estar vacío'
+      });
+    }
+
+    // Actualizar todos los productos con ese proveedor
+    const { data, error } = await supabase
+      .from('productos')
+      .update({ proveedor: nombreNuevo })
+      .eq('proveedor', nombreViejo)
+      .select();
+
+    if (error) throw error;
+
+    console.log(`✅ ${data.length} productos actualizados`);
+
+    res.json({
+      success: true,
+      message: `Proveedor renombrado exitosamente`,
+      productosActualizados: data.length
+    });
+  } catch (error) {
+    console.error('❌ Error al renombrar proveedor:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Renombrar marca (actualiza todos los productos)
+app.put('/api/marcas/:nombreViejo/renombrar', async (req, res) => {
+  try {
+    const { nombreViejo } = req.params;
+    const { nombreNuevo } = req.body;
+
+    console.log(`📝 Renombrando marca "${nombreViejo}" → "${nombreNuevo}"`);
+
+    if (!nombreNuevo || nombreNuevo.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'El nombre nuevo no puede estar vacío'
+      });
+    }
+
+    // Actualizar todos los productos con esa marca
+    const { data, error } = await supabase
+      .from('productos')
+      .update({ marca: nombreNuevo })
+      .eq('marca', nombreViejo)
+      .select();
+
+    if (error) throw error;
+
+    console.log(`✅ ${data.length} productos actualizados`);
+
+    res.json({
+      success: true,
+      message: `Marca renombrada exitosamente`,
+      productosActualizados: data.length
+    });
+  } catch (error) {
+    console.error('❌ Error al renombrar marca:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== RUTAS GENERALES ====================
+
 // 1. Obtener todos los productos (con paginación)
 app.get('/api/productos', async (req, res) => {
   try {
@@ -56,10 +231,20 @@ app.get('/api/productos', async (req, res) => {
 
 // 2. Obtener un producto por ID
 app.get('/api/productos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  console.log(`🔍 Endpoint /api/productos/:id llamado con ID: "${id}"`);
 
-    const { data, error } = await supabase
+  // Validar que el ID sea un número
+  if (!/^\d+$/.test(id)) {
+    console.log(`❌ ID no es numérico: "${id}"`);
+    return res.status(400).json({
+      success: false,
+      error: `ID inválido: "${id}" no es un número`
+    });
+  }
+
+  try {
+    const { data, error} = await supabase
       .from('productos')
       .select('*, precios_por_mayor(*)')
       .eq('id', id)
@@ -69,6 +254,7 @@ app.get('/api/productos/:id', async (req, res) => {
 
     res.json({ success: true, data });
   } catch (error) {
+    console.error(`❌ Error en GET /api/productos/:id:`, error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -144,14 +330,19 @@ app.put('/api/productos/:id', async (req, res) => {
 app.delete('/api/productos/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`🗑️ Eliminando producto ID: ${id}`);
 
     const { error } = await supabase
       .from('productos')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error al eliminar:', error);
+      throw error;
+    }
 
+    console.log(`✅ Producto ${id} eliminado correctamente`);
     res.json({ success: true, message: 'Producto eliminado' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -383,6 +574,86 @@ app.get('/api/productos/faltantes/lista', async (req, res) => {
 
     res.json({ success: true, data });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ENDPOINTS REGISTRO POR LOTES ====================
+
+// Crear lote de productos (por proveedor o por marca)
+app.post('/api/productos/lote', async (req, res) => {
+  try {
+    const { tipo, proveedor, marca, productos } = req.body;
+
+    console.log('📦 Recibiendo lote de productos:', {
+      tipo,
+      proveedor,
+      marca,
+      cantidadProductos: productos?.length
+    });
+
+    // Validar que haya productos
+    if (!productos || !Array.isArray(productos) || productos.length === 0) {
+      console.error('❌ Error: No hay productos en el lote');
+      return res.status(400).json({
+        success: false,
+        error: 'Debe proporcionar al menos un producto'
+      });
+    }
+
+    // Preparar productos para insertar
+    const productosParaInsertar = productos.map((producto, index) => {
+      const productoBase = {
+        imagen: producto.imagen || '',
+        nombre: producto.nombre || '',
+        descripcion: producto.descripcion || '',
+        cantidad_ingresada: parseInt(producto.cantidad) || 0,
+        precio_compra_unidad: parseFloat(producto.precio_compra) || 0,
+        precio_venta_unidad: producto.precio_venta ? parseFloat(producto.precio_venta) : null,
+        estado_registro: 'proceso',
+        created_at: new Date().toISOString()
+      };
+
+      // Asignar proveedor o marca según el tipo
+      if (tipo === 'proveedor' && proveedor) {
+        productoBase.proveedor = proveedor;
+        productoBase.marca = producto.marca || null;
+      } else if (tipo === 'marca' && marca) {
+        productoBase.marca = marca;
+        productoBase.proveedor = producto.proveedor || null;
+      }
+
+      console.log(`  Producto ${index + 1}:`, {
+        descripcion: productoBase.descripcion,
+        cantidad: productoBase.cantidad_ingresada,
+        precio: productoBase.precio_compra_unidad
+      });
+
+      return productoBase;
+    });
+
+    console.log('💾 Insertando productos en Supabase...');
+
+    // Insertar todos los productos
+    const { data, error } = await supabase
+      .from('productos')
+      .insert(productosParaInsertar)
+      .select();
+
+    if (error) {
+      console.error('❌ Error de Supabase:', error);
+      throw error;
+    }
+
+    console.log(`✅ ${data.length} productos creados exitosamente`);
+
+    res.status(201).json({
+      success: true,
+      message: `${data.length} productos creados exitosamente`,
+      data
+    });
+  } catch (error) {
+    console.error('❌ Error al crear lote de productos:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

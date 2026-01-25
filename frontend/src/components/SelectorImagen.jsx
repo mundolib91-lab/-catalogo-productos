@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { subirImagen } from '../utils/imageUpload';
 import Toast from './Toast';
 import { useToast } from '../hooks/useToast';
@@ -7,6 +7,11 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
   const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [subiendo, setSubiendo] = useState(false);
   const [previsualizacion, setPrevisualizacion] = useState(imagenActual || '');
+
+  // Sincronizar cuando imagenActual cambia desde fuera
+  useEffect(() => {
+    setPrevisualizacion(imagenActual || '');
+  }, [imagenActual]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
