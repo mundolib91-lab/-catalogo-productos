@@ -65,11 +65,11 @@ git push origin master
 
 ---
 
-## ⚠️ TAREAS PENDIENTES
+## ✅ FUNCIONALIDADES IMPLEMENTADAS
 
-### 🔴 Sistema de Reportes de Faltantes (EN PROGRESO):
+### 🎉 Sistema de Reportes de Faltantes (✅ COMPLETADO Y EN PRODUCCIÓN):
 
-**SESIÓN 1 (Completada):** ✅
+**SESIÓN 1 (✅ Completada):**
 - ✅ Tabla `faltantes` en Supabase
 - ✅ Tabla `faltantes_historial` para timeline
 - ✅ Botón flotante [+] en Vista Atención
@@ -78,8 +78,8 @@ git push origin master
 **SESIÓN 2 (✅ Completada):**
 - ✅ Formulario Producto Nuevo (foto + descripción + prioridad + notas)
 - ✅ Formulario Grupo/Repisa (foto repisa + descripción + prioridad)
-- ✅ Botón "Reportar Faltante" en cada card de producto (Tipo 1: Existente)
-- ✅ Endpoints backend para crear faltantes
+- ✅ Botón "Reportar" en cada card de producto (Tipo 1: Existente)
+- ✅ Endpoints backend para crear faltantes (POST, GET, PUT)
 - ✅ Fix: Corregido nombre de prop onImagenCambiada en SelectorImagen
 
 **SESIÓN 3 (✅ Completada):**
@@ -90,17 +90,34 @@ git push origin master
 - ✅ Cambio manual de estados con botón
 - ✅ Cards con badges informativos y cálculo de tiempo en estado
 - ✅ Integración en App.jsx y MenuHamburguesa.jsx
-- [ ] Filtros avanzados
-- [ ] Permisos por rol
 
-### Próximas funcionalidades generales:
+**Mejoras adicionales (✅ Completadas):**
+- ✅ FormularioReportarExistente: Modal de confirmación al reportar productos existentes
+- ✅ Selección de prioridad y notas al reportar
+- ✅ Colores invertidos: Verde (disponible) → Rojo suave (reportado)
+- ✅ Columnas `faltante_reportado` y `fecha_reporte_faltante` en tabla productos
+- ✅ **DESPLEGADO EN PRODUCCIÓN** - Sistema completo funcional
+
+**Cómo usar el sistema:**
+1. **Reportar desde Atención:** Botón [+] azul → Elegir tipo → Llenar formulario
+2. **Gestionar en Central:** Menú → Central Faltantes → Ver por estados → Cambiar estados
+3. **3 tipos de faltantes:** Existente (con foto), Nuevo (sin registro), Grupo (repisa completa)
+
+---
+
+## ⚠️ TAREAS PENDIENTES
+
+### Próximas funcionalidades:
 - 📦 Vista de Inventario
 - 🛒 Vista de Compras
+- 🔐 Sistema de roles y permisos
+- 📊 Reportes y estadísticas de faltantes
 
 ### Mejoras técnicas:
 - Considerar separar base de datos dev/prod si es necesario (actualmente compartida)
 - Agregar tests automatizados
 - Configurar CI/CD más robusto
+- Filtros avanzados en Central Faltantes
 
 ---
 
@@ -331,3 +348,5 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - ✅ **SESIÓN 1 Sistema Faltantes:** Tabla en Supabase + Botón flotante [+] + Menú emergente
 - ✅ **SESIÓN 2 Sistema Faltantes:** Formularios Producto Nuevo + Grupo/Repisa + Backend endpoints
 - ✅ **SESIÓN 3 Sistema Faltantes:** Vista Central Faltantes con gestión completa de estados y filtros
+- ✅ **Mejoras Sistema Faltantes:** Formulario de confirmación al reportar existentes + Colores invertidos (verde/rojo)
+- ✅ **DEPLOY A PRODUCCIÓN:** Sistema completo de faltantes en https://vercel (rama master) - Funcional y probado
