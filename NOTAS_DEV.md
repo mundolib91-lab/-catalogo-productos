@@ -1289,13 +1289,14 @@ supabase db dump -f backup_$(date +%Y%m%d).sql
 ### Railway CLI:
 - [x] Instalado (v4.27.2)
 - [x] Login completado
-- [ ] Proyecto vinculado
-- [ ] Probado con `railway status`
+- [x] Proyecto vinculado (acceptable-miracle / development)
+- [x] Probado con `railway status`
+- [ ] Servicio vinculado (requiere nombre del servicio)
 
 ### Supabase CLI:
-- [ ] Descargado de GitHub
-- [ ] Ejecutable en PATH
-- [ ] Login completado
+- [x] Descargado de GitHub (v2.72.7)
+- [x] Ejecutable en PATH (~/bin/supabase.exe)
+- [ ] Login completado (requiere access token)
 - [ ] Proyecto vinculado
 - [ ] Probado con `supabase db query`
 
@@ -1307,28 +1308,70 @@ supabase db dump -f backup_$(date +%Y%m%d).sql
 
 ---
 
-## 🚀 Próximos Pasos (Cuando tengas conexión estable)
+## 🚀 Próximos Pasos - Completar Configuración
 
-1. **Railway CLI:**
-   ```bash
-   railway link
-   railway status
-   railway variables
-   ```
+### 1. Railway CLI - Vincular Servicio
 
-2. **Supabase CLI:**
-   ```bash
-   # Descargar e instalar manualmente
-   supabase login
-   supabase link --project-ref zpvtovhomaykvcowbtda
-   supabase db query "SELECT version();"
-   ```
+El proyecto ya está vinculado, pero falta vincular el servicio específico del backend.
 
-3. **Probar comandos básicos:**
-   ```bash
-   railway logs --follow
-   supabase db inspect productos
-   ```
+**Opción A - Vía Railway Dashboard:**
+1. Ve a https://railway.app/project/acceptable-miracle
+2. Anota el nombre exacto del servicio backend
+3. En la terminal ejecuta: `railway service <nombre-del-servicio>`
+
+**Opción B - Listar servicios interactivamente (desde tu terminal CMD/PowerShell):**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+railway service
+# Selecciona el servicio backend cuando aparezca el menú
+```
+
+**Verificar que funciona:**
+```bash
+railway variables        # Debería mostrar las 4 variables de Supabase
+railway logs --tail 50   # Debería mostrar logs del backend
+```
+
+### 2. Supabase CLI - Obtener Access Token
+
+El CLI ya está instalado en `~/bin/supabase.exe`, solo falta autenticación.
+
+**Obtener token:**
+1. Ve a https://supabase.com/dashboard/account/tokens
+2. Crea un nuevo token (nombre: "CLI Access")
+3. Copia el token generado
+
+**Configurar:**
+```bash
+export SUPABASE_ACCESS_TOKEN="tu_token_aqui"
+# O agrégalo permanentemente a ~/.bashrc:
+echo 'export SUPABASE_ACCESS_TOKEN="tu_token"' >> ~/.bashrc
+```
+
+**Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+supabase link --project-ref zpvtovhomaykvcowbtda
+```
+
+**Probar:**
+```bash
+supabase db query "SELECT COUNT(*) FROM productos;"
+supabase db inspect productos
+```
+
+### 3. Verificación Final
+
+Una vez completados los pasos anteriores:
+```bash
+# Railway
+railway status
+railway variables
+railway logs --tail 20
+
+# Supabase
+supabase db query "SELECT tienda, COUNT(*) FROM productos GROUP BY tienda;"
+```
 
 ---
 
