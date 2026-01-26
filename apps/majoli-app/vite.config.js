@@ -12,10 +12,10 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
-        name: 'Mundo Lib - Registro',
-        short_name: 'Mundo Lib',
-        description: 'Sistema de gestión de inventario para Mundo Lib',
-        theme_color: '#f59e0b',
+        name: 'Majoli - Registro',
+        short_name: 'Majoli',
+        description: 'Sistema de gestión de inventario para Majoli',
+        theme_color: '#10B981',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
@@ -23,28 +23,28 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
+            src: '/icon-majoli.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: '/icon-majoli.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
+          },
+          {
             src: '/icon-registro-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/icon-registro-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
             src: '/icon-registro-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
-          },
-          {
-            src: '/icon-registro-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
           }
         ]
       },
