@@ -255,14 +255,13 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
 
               <div className="md:col-span-2">
                 <label className="block text-lg font-medium text-gray-700 mb-1">
-                  Nombre del Producto *
+                  Nombre del Producto
                 </label>
                 <input
                   type="text"
                   name="nombre_producto"
                   value={formData.nombre_producto}
                   onChange={handleChange}
-                  required
                   className="w-full px-4 py-3 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500"
                   placeholder="Ej: Marcador Permanente Sharpie Negro"
                 />

@@ -23,7 +23,6 @@ function CentralFaltantes({ menuHamburguesa }) {
   const [contadores, setContadores] = useState({
     todos: 0,
     reportado: 0,
-    en_verificacion: 0,
     confirmado: 0,
     en_compras: 0,
     pedido: 0,
@@ -68,7 +67,6 @@ function CentralFaltantes({ menuHamburguesa }) {
         setContadores({
           todos: todos.length,
           reportado: todos.filter(f => f.estado === 'reportado').length,
-          en_verificacion: todos.filter(f => f.estado === 'en_verificacion').length,
           confirmado: todos.filter(f => f.estado === 'confirmado').length,
           en_compras: todos.filter(f => f.estado === 'en_compras').length,
           pedido: todos.filter(f => f.estado === 'pedido').length,
@@ -176,7 +174,6 @@ function CentralFaltantes({ menuHamburguesa }) {
               {/* Pestañas de estados */}
               {[
                 { estado: 'reportado', label: 'Reportados', color: 'red' },
-                { estado: 'en_verificacion', label: 'Verificando', color: 'yellow' },
                 { estado: 'confirmado', label: 'Confirmados', color: 'orange' },
                 { estado: 'en_compras', label: 'En Compras', color: 'blue' },
                 { estado: 'pedido', label: 'Pedidos', color: 'purple' },
@@ -281,6 +278,120 @@ function CentralFaltantes({ menuHamburguesa }) {
             </div>
           )}
         </div>
+
+        {/* Modal de Detalle */}
+        {faltanteSeleccionado && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header del modal */}
+              <div className="bg-red-600 dark:bg-red-700 text-white p-4 rounded-t-xl flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Detalle del Faltante</h2>
+                <button
+                  onClick={() => setFaltanteSeleccionado(null)}
+                  className="text-3xl hover:bg-red-700 dark:hover:bg-red-800 rounded-full w-10 h-10 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Contenido del modal */}
+              <div className="p-6">
+                {/* Imagen grande */}
+                {faltanteSeleccionado.imagen && (
+                  <div className="mb-4">
+                    <img
+                      src={faltanteSeleccionado.imagen}
+                      alt={faltanteSeleccionado.descripcion}
+                      className="w-full max-h-64 object-contain rounded-lg"
+                    />
+                  </div>
+                )}
+
+                {/* Información principal */}
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Descripción:</p>
+                    <p className="text-xl text-gray-900 dark:text-white">
+                      {faltanteSeleccionado.producto_nombre || faltanteSeleccionado.descripcion}
+                    </p>
+                  </div>
+
+                  {faltanteSeleccionado.notas && (
+                    <div>
+                      <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Notas:</p>
+                      <p className="text-xl text-gray-900 dark:text-white">
+                        {faltanteSeleccionado.notas}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Tipo:</p>
+                      <p className="text-xl text-gray-900 dark:text-white capitalize">
+                        {faltanteSeleccionado.tipo === 'existente' ? 'Existente' :
+                         faltanteSeleccionado.tipo === 'nuevo' ? 'Nuevo' :
+                         'Grupo/Repisa'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Origen:</p>
+                      <p className="text-xl text-gray-900 dark:text-white">
+                        {faltanteSeleccionado.origen === 'atencion_cliente' ? 'Atención Cliente' : 'Inventario'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Prioridad:</p>
+                      <p className={`text-xl font-bold ${
+                        faltanteSeleccionado.prioridad === 'alta' ? 'text-red-600' :
+                        faltanteSeleccionado.prioridad === 'media' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {faltanteSeleccionado.prioridad?.toUpperCase()}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Estado:</p>
+                      <p className="text-xl text-gray-900 dark:text-white">
+                        {faltanteSeleccionado.estado === 'reportado' ? '🔴 REPORTADO' :
+                         faltanteSeleccionado.estado === 'confirmado' ? '🟠 CONFIRMADO' :
+                         faltanteSeleccionado.estado === 'en_compras' ? '🔵 EN COMPRAS' :
+                         faltanteSeleccionado.estado === 'pedido' ? '🟣 PEDIDO' :
+                         faltanteSeleccionado.estado === 'recibido' ? '🟢 RECIBIDO' :
+                         '⚪ ARCHIVADO'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-bold text-gray-500 dark:text-gray-400">ID del Faltante:</p>
+                    <p className="text-xl text-gray-900 dark:text-white">
+                      #FLT-{String(faltanteSeleccionado.id).padStart(5, '0')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-bold text-gray-500 dark:text-gray-400">Tiempo en este estado:</p>
+                    <p className="text-xl text-gray-900 dark:text-white">
+                      {calcularTiempoEnEstado(faltanteSeleccionado.fecha_cambio_estado)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botón cerrar */}
+                <button
+                  onClick={() => setFaltanteSeleccionado(null)}
+                  className="mt-6 w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xl font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -290,7 +401,6 @@ function CentralFaltantes({ menuHamburguesa }) {
 function FaltanteCard({ faltante, onCambiarEstado, onVerDetalle, calcularTiempoEnEstado }) {
   const estadoConfig = {
     reportado: { color: 'red', label: 'REPORTADO', emoji: '🔴' },
-    en_verificacion: { color: 'yellow', label: 'VERIFICANDO', emoji: '🟡' },
     confirmado: { color: 'orange', label: 'CONFIRMADO', emoji: '🟠' },
     en_compras: { color: 'blue', label: 'EN COMPRAS', emoji: '🔵' },
     pedido: { color: 'purple', label: 'PEDIDO', emoji: '🟣' },
@@ -366,41 +476,83 @@ function FaltanteCard({ faltante, onCambiarEstado, onVerDetalle, calcularTiempoE
         </p>
       </div>
 
-      {/* Botones */}
+      {/* Botón Ver Detalle */}
+      <button
+        onClick={onVerDetalle}
+        className="w-full py-2 mb-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors text-lg font-semibold"
+      >
+        Ver Detalle
+      </button>
+
+      {/* Botones de Estado */}
       <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={onVerDetalle}
-          className="py-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors text-lg font-semibold"
+          onClick={() => onCambiarEstado('reportado')}
+          disabled={faltante.estado === 'reportado'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'reportado'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60'
+          }`}
         >
-          Ver Detalle
+          🔴 Reportado
         </button>
         <button
-          onClick={() => {
-            // Aquí se debería abrir un modal para cambiar estado
-            // Por ahora, avanzamos al siguiente estado automáticamente
-            const estadosSiguientes = {
-              reportado: 'en_verificacion',
-              en_verificacion: 'confirmado',
-              confirmado: 'en_compras',
-              en_compras: 'pedido',
-              pedido: 'recibido',
-              recibido: 'archivado'
-            };
-            const nuevoEstado = estadosSiguientes[faltante.estado];
-            if (nuevoEstado) {
-              onCambiarEstado(nuevoEstado);
-            }
-          }}
-          className="py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors text-lg font-bold"
+          onClick={() => onCambiarEstado('confirmado')}
+          disabled={faltante.estado === 'confirmado'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'confirmado'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/60'
+          }`}
         >
-          Cambiar Estado
+          🟠 Confirmado
+        </button>
+        <button
+          onClick={() => onCambiarEstado('en_compras')}
+          disabled={faltante.estado === 'en_compras'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'en_compras'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60'
+          }`}
+        >
+          🔵 En Compras
+        </button>
+        <button
+          onClick={() => onCambiarEstado('pedido')}
+          disabled={faltante.estado === 'pedido'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'pedido'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/60'
+          }`}
+        >
+          🟣 Pedido
+        </button>
+        <button
+          onClick={() => onCambiarEstado('recibido')}
+          disabled={faltante.estado === 'recibido'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'recibido'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
+          }`}
+        >
+          🟢 Recibido
+        </button>
+        <button
+          onClick={() => onCambiarEstado('archivado')}
+          disabled={faltante.estado === 'archivado'}
+          className={`py-2 rounded-lg transition-colors text-sm font-bold ${
+            faltante.estado === 'archivado'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+          }`}
+        >
+          ⚪ Archivar
         </button>
       </div>
-
-      {/* ID del faltante */}
-      <p className="text-base text-gray-400 dark:text-gray-500 mt-2 text-center">
-        ID: #FLT-{String(faltante.id).padStart(5, '0')}
-      </p>
     </div>
   );
 }

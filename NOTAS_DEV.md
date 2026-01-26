@@ -506,28 +506,100 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-25 (Sesión tarde)
+---
+
+## 🎯 MEJORAS Y REFINAMIENTOS (SESIÓN 5 - ✅ COMPLETADO):
+
+### Central Faltantes - Mejoras de UX:
+
+**✅ Modal de Detalles Completo:**
+- Botón "Ver Detalle" ahora abre modal con toda la información del faltante
+- Muestra: Imagen grande, descripción, notas, tipo, origen, prioridad, estado actual, ID, tiempo en estado
+- Diseño responsive con scroll para contenido largo
+- Botón de cierre en header y footer del modal
+
+**✅ Botones de Estado Directos:**
+- Eliminado botón único "Cambiar Estado" que avanzaba consecutivamente
+- Implementado grid de 6 botones para saltar directamente a cualquier estado:
+  - 🔴 Reportado
+  - 🟠 Confirmado
+  - 🔵 En Compras
+  - 🟣 Pedido
+  - 🟢 Recibido
+  - ⚪ Archivar
+- Estado actual aparece deshabilitado/gris
+- Permite saltar estados según necesidad del flujo real
+
+**✅ Simplificación del Flujo:**
+- **ELIMINADO estado "Verificando"** del sistema de faltantes
+- Flujo simplificado: Reportado → Confirmado → En Compras → Pedido → Recibido → Archivado
+- Actualizado en: pestañas, configuración de estados, modal de detalles, contadores
+
+**✅ Optimización Visual:**
+- Eliminado campo ID de las tarjetas (libera espacio para botones)
+- ID sigue visible en el modal de detalles
+- Tarjetas más limpias y enfocadas en datos relevantes
+
+### Atención al Cliente - Simplificación de Filtros:
+
+**✅ Eliminados filtros innecesarios:**
+- Removido filtro "Por Marca" (redundante con búsqueda)
+- Removido filtro "Por Proveedor" (no necesario en esta vista)
+- Solo queda filtro útil: **"Solo Faltantes"**
+- Búsqueda de texto cubre necesidad de filtrar por marca/proveedor
+- Interfaz más limpia y directa
+
+### Registro de Productos - Mejoras de Flujo:
+
+**✅ Completar Registro - Campo Nombre Opcional:**
+- Campo "Nombre del Producto" ya **NO es obligatorio** en FormularioCompleto
+- Removido asterisco (*) y atributo `required`
+- Mayor flexibilidad al completar registros
+- Solo precios de compra/venta siguen siendo obligatorios
+
+**✅ Tarjetas Completados - Información Completa:**
+- Agregados datos clave en tarjetas de productos completados:
+  - 💰 Precio de compra (Bs)
+  - 💵 Precio de venta (Bs)
+  - 📈 **Ganancia** (Bs y porcentaje) ⭐ NUEVO
+  - 📦 Stock (unidades)
+- Cálculo automático de ganancia: monto y porcentaje
+- Ejemplo: "Bs 1.50 (60.0%)"
+- Facilita verificación de datos antes de pasar a Existentes
+
+**✅ Botón "Verificar OK ✓":**
+- Renombrado botón "A Existente" → **"Verificar OK ✓"**
+- Semántica más clara: indica que se revisó y aprobó el producto
+- Flujo mejorado:
+  1. Producto llega a Completados
+  2. Se revisan precios, ganancia, stock
+  3. Se presiona "Verificar OK ✓"
+  4. Producto pasa a Existentes
+- Texto mientras procesa: "Verificando..."
+
+### Archivos Modificados:
+- `frontend/src/pages/CentralFaltantes.jsx` - Modal, botones directos, eliminado verificando
+- `frontend/src/pages/Atencion.jsx` - Eliminados filtros de marca y proveedor
+- `frontend/src/pages/FormularioCompleto.jsx` - Campo nombre opcional
+- `frontend/src/pages/Registro.jsx` - Datos completos en Completados, botón Verificar OK
+
+### Beneficios:
+- ✅ **Central Faltantes**: Navegación más rápida entre estados, información completa visible
+- ✅ **Atención al Cliente**: Interfaz más limpia sin filtros redundantes
+- ✅ **Completar Registro**: Más flexible, menos campos obligatorios
+- ✅ **Verificación de Datos**: Todos los datos clave visibles antes de aprobar
+- ✅ **UX mejorada**: Botones más descriptivos y flujos más claros
+
+---
+
+**Última actualización:** 2026-01-25 (Sesión noche - SESIÓN 5)
 **Rama actual al guardar:** dev
-**Cambios recientes (SESIÓN 4):**
-- ✅ Configuración completa de environments dev/prod
-- ✅ Railway: 2 environments (production y development)
-- ✅ Vercel: Variables de entorno separadas por ambiente
-- ✅ `.env` local configurado para usar backend de desarrollo
-- ✅ Workflow de desarrollo documentado
-- ✅ Hot reload probado y funcionando
-- ✅ Confirmado: App de producción instalable sin problemas
-- ✅ Documentado problema de Firewall y solución para acceso desde celular
-- ✅ **Tamaños de fuente aumentados globalmente** (18px texto regular, 24px títulos) para mejor legibilidad
-- ✅ **SESIÓN 1 Sistema Faltantes:** Tabla en Supabase + Botón flotante [+] + Menú emergente
-- ✅ **SESIÓN 2 Sistema Faltantes:** Formularios Producto Nuevo + Grupo/Repisa + Backend endpoints
-- ✅ **SESIÓN 3 Sistema Faltantes:** Vista Central Faltantes con gestión completa de estados y filtros
-- ✅ **Mejoras Sistema Faltantes:** Formulario de confirmación al reportar existentes + Colores invertidos (verde/rojo)
-- ✅ **DEPLOY A PRODUCCIÓN:** Sistema completo de faltantes en https://vercel (rama master) - Funcional y probado
-- ✅ **SISTEMA REGISTRO POR LOTES:** MenuRegistro + FormularioLoteProveedor + FormularioLoteMarca
-- ✅ **Registro por Proveedor/Marca:** Autocompletado inteligente + Solo descripción obligatoria
-- ✅ **Correcciones Formularios Lote:** Campo nombre eliminado, editar productos, eliminar del lote
-- ✅ **SISTEMA DE FILTROS AVANZADOS:** Proveedor + Marca + Orden (3 pestañas)
-- ✅ **GESTIÓN DE DATOS:** Vista para editar proveedores/marcas y corregir typos masivamente
-- ✅ **Eliminar productos en Proceso:** Modal de confirmación
-- ✅ **Fix de Rutas Backend:** Endpoints específicos antes de :id
-- ✅ **Título corregido:** "APP REGISTROS" → "REGISTRO DE PRODUCTOS"
+**Cambios recientes:**
+- ✅ **SESIÓN 5:** Mejoras Central Faltantes + Simplificación filtros Atención + Refinamiento Registro
+- ✅ Modal detalle completo en faltantes
+- ✅ Botones directos para cambio de estado (elimina navegación consecutiva)
+- ✅ Eliminado estado "Verificando" del flujo de faltantes
+- ✅ Filtros de Atención simplificados (solo "Solo Faltantes")
+- ✅ Campo nombre opcional en Completar Registro
+- ✅ Datos completos en tarjetas Completados (precios + ganancia + stock)
+- ✅ Botón "Verificar OK ✓" para aprobar productos antes de pasar a Existentes

@@ -435,24 +435,27 @@ app.put('/api/productos/:id/pasar-existente', async (req, res) => {
     const { data, error } = await supabase
       .from('productos')
       .update({
-        estado_registro: 'existente',
-        fecha_existente: new Date().toISOString()
+        estado_registro: 'existente'
       })
       .eq('id', id)
       .eq('estado_registro', 'completado') // Solo si está completado
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error al mover a existente:', error);
+      throw error;
+    }
 
     if (!data) {
+      console.log(`⚠️ Producto ${id} no está en estado completado`);
       return res.status(400).json({
         success: false,
         error: 'El producto no está en estado completado'
       });
     }
 
-    console.log(`✅ Producto ${id} movido a Existente`);
+    console.log(`✅ Producto ${id} movido a Existente correctamente`);
     res.json({ success: true, data, message: 'Producto disponible en Existentes' });
   } catch (error) {
     console.error('❌ Error al mover a existente:', error);

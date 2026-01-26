@@ -18,8 +18,6 @@ function Atencion({ menuHamburguesa }) {
   const [busqueda, setBusqueda] = useState('');
 
   // Filtros
-  const [filtroMarca, setFiltroMarca] = useState(false);
-  const [filtroProveedor, setFiltroProveedor] = useState(false);
   const [soloFaltantes, setSoloFaltantes] = useState(false);
 
   // Modales
@@ -210,28 +208,6 @@ function Atencion({ menuHamburguesa }) {
       <div className="max-w-6xl mx-auto px-4 mt-4">
         <div className="flex gap-2 items-center flex-wrap">
           <span className="text-lg text-gray-600 dark:text-gray-400">Filtros:</span>
-
-          <button
-            onClick={() => setFiltroMarca(!filtroMarca)}
-            className={`px-4 py-2 rounded-full text-lg transition-colors ${
-              filtroMarca
-                ? 'bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            Por Marca
-          </button>
-
-          <button
-            onClick={() => setFiltroProveedor(!filtroProveedor)}
-            className={`px-4 py-2 rounded-full text-lg transition-colors ${
-              filtroProveedor
-                ? 'bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            Por Proveedor
-          </button>
 
           <button
             onClick={() => setSoloFaltantes(!soloFaltantes)}

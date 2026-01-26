@@ -643,11 +643,31 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
           onClose={cerrarToast}
         />
       )}
-      <div className={`${colorFondo} p-2 rounded mb-2 dark:text-white`}>
-        <p className="text-lg">✅ Registro completo</p>
-        <p className="text-base text-gray-600 dark:text-gray-400 mt-1">
-          Completado: {new Date(producto.fecha_completado).toLocaleDateString()}
-        </p>
+      <div className="flex justify-between text-lg mb-2">
+        <span className="text-gray-600 dark:text-gray-400">Compra:</span>
+        <span className="font-bold dark:text-white">Bs {producto.precio_compra_unidad?.toFixed(2)}</span>
+      </div>
+      <div className="flex justify-between text-lg mb-2">
+        <span className="text-gray-600 dark:text-gray-400">Venta:</span>
+        <span className="font-bold text-green-600 dark:text-green-400">Bs {producto.precio_venta_unidad?.toFixed(2)}</span>
+      </div>
+      {(() => {
+        const precioCompra = producto.precio_compra_unidad || 0;
+        const precioVenta = producto.precio_venta_unidad || 0;
+        const ganancia = precioVenta - precioCompra;
+        const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+        return (
+          <div className="flex justify-between text-lg mb-2">
+            <span className="text-gray-600 dark:text-gray-400">Ganancia:</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              Bs {ganancia.toFixed(2)} ({porcentaje.toFixed(1)}%)
+            </span>
+          </div>
+        );
+      })()}
+      <div className="flex justify-between text-lg mb-3">
+        <span className="text-gray-600 dark:text-gray-400">Stock:</span>
+        <span className="font-bold text-blue-600 dark:text-blue-400">{producto.cantidad_ingresada} unid</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -655,14 +675,14 @@ function ProductoCompletado({ producto, onActualizar, colorFondo }) {
           onClick={() => setMostrarVerEditar(true)}
           className="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 py-2 rounded-lg font-bold hover:bg-purple-200 dark:hover:bg-purple-900/60 text-base"
         >
-          👁️ Ver
+          Ver Detalles
         </button>
         <button
           onClick={handlePasarAExistente}
           disabled={moviendoAExistente}
           className="bg-green-500 dark:bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 text-base"
         >
-          {moviendoAExistente ? '⏳' : '→ Existente'}
+          {moviendoAExistente ? 'Verificando...' : 'Verificar OK ✓'}
         </button>
       </div>
 
