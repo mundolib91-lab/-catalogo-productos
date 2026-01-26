@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { APP_CONFIG } from '../config';
 
 function MenuHamburguesa({ vistaActual, onCambiarVista }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -57,7 +58,7 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
         {/* Header del menú */}
         <div className="bg-gradient-to-r from-amber-500 to-blue-500 text-white p-6">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-3xl font-bold">Mundo Lib</h2>
+            <h2 className="text-3xl font-bold">{APP_CONFIG.nombre}</h2>
             <button
               onClick={() => setMenuAbierto(false)}
               className="text-3xl hover:bg-white hover:bg-opacity-20 w-10 h-10 rounded-full flex items-center justify-center"

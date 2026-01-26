@@ -15,12 +15,12 @@ export const APP_CONFIG = {
   nombre_corto: 'LC',
 
   // Colores (Tailwind)
-  color_principal: '#a855f7',    // Morado (purple-500)
-  color_secundario: '#c084fc',   // Morado claro (purple-400)
-  color_oscuro: '#9333ea',       // Morado oscuro (purple-600)
+  color_principal: '#EC4899',    // Rosa (pink-500)
+  color_secundario: '#F472B6',   // Rosa claro (pink-400)
+  color_oscuro: '#DB2777',       // Rosa oscuro (pink-600)
 
   // Icono/Emoji
-  icono: '💜',
+  icono: '🌸',
 
   // Logo (ruta relativa a public/)
   logo: '/logo-lili.png',
