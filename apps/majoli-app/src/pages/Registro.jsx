@@ -14,7 +14,7 @@ import APP_CONFIG from '../config';
 function Registro({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
   const { toast, success, error: mostrarError, cerrarToast } = useToast();
-  const [pestanaActiva, setPestanaActiva] = useState('existentes');
+  const [pestanaActiva, setPestanaActiva] = useState('existente');
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
