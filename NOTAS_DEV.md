@@ -1012,3 +1012,334 @@ apps/lili-app/public/icon-lili.svg
 - ✅ Campo nombre opcional en Completar Registro
 - ✅ Datos completos en tarjetas Completados (precios + ganancia + stock)
 - ✅ Botón "Verificar OK ✓" para aprobar productos antes de pasar a Existentes
+
+## 🛠️ HERRAMIENTAS CLI (Command Line Interface)
+
+### 📊 Estado de Instalación
+
+| CLI | Estado | Versión | Configuración |
+|-----|--------|---------|---------------|
+| **Railway CLI** | ✅ Instalado | 4.27.2 | ⏳ Pendiente vincular |
+| **Supabase CLI** | ⏳ Pendiente | v2.72.7 | ⏳ Pendiente instalar |
+| **Vercel CLI** | ✅ Instalado | 50.5.0 | ✅ Configurado |
+
+---
+
+## 🚂 RAILWAY CLI
+
+### ✅ Ya Instalado
+```bash
+npm install -g @railway/cli
+railway login  # Ya completado
+```
+
+### ⏳ Configuración Pendiente
+
+**1. Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+railway link
+# Selecciona: catalogo-productos
+```
+
+**2. Verificar vinculación:**
+```bash
+railway status
+```
+
+### 📚 Comandos Útiles
+
+#### Ver Variables de Entorno:
+```bash
+# Listar todas las variables
+railway variables
+
+# Ver valor de una variable específica
+railway variables get SUPABASE_SERVICE_ROLE_KEY
+```
+
+#### Configurar Variables:
+```bash
+# Agregar/actualizar variable
+railway variables set KEY=value
+
+# Ejemplo:
+railway variables set SUPABASE_URL=https://zpvtovhomaykvcowbtda.supabase.co
+```
+
+#### Ver Logs en Tiempo Real:
+```bash
+# Logs del servicio
+railway logs
+
+# Logs con follow (stream en vivo)
+railway logs --follow
+```
+
+#### Deploy y Status:
+```bash
+# Ver status del deployment
+railway status
+
+# Hacer deploy (desde código local)
+railway up
+
+# Ver servicios del proyecto
+railway service
+```
+
+#### Ejecutar Comandos en el Contenedor:
+```bash
+# Abrir shell en el contenedor
+railway shell
+
+# Ejecutar comando específico
+railway run node --version
+```
+
+### 💡 Casos de Uso en Este Proyecto
+
+**1. Verificar variables de entorno (sin ir al dashboard):**
+```bash
+railway variables | grep SUPABASE
+```
+
+**2. Ver logs cuando hay errores:**
+```bash
+railway logs --follow
+```
+
+**3. Cambiar variables rápidamente:**
+```bash
+railway variables set SUPABASE_SERVICE_ROLE_KEY=nueva_key
+```
+
+**4. Ver deployments:**
+```bash
+railway status
+```
+
+---
+
+## 🗄️ SUPABASE CLI
+
+### ⏳ Instalación Pendiente
+
+#### Método 1: Descarga Manual (Recomendado para Windows)
+
+**1. Descargar:**
+```
+https://github.com/supabase/cli/releases/download/v2.72.7/supabase_windows_amd64.tar.gz
+```
+
+**2. Extraer:**
+- Descomprimir el .tar.gz (usar 7-Zip o WinRAR)
+- Encontrarás el archivo `supabase.exe`
+
+**3. Instalar:**
+```powershell
+# Crear directorio (PowerShell como Admin)
+mkdir "C:\Program Files\supabase"
+
+# Mover el ejecutable
+move supabase.exe "C:\Program Files\supabase\"
+
+# Agregar al PATH
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\supabase", "Machine")
+```
+
+**4. Verificar:**
+```bash
+# Abrir nueva terminal
+supabase --version
+```
+
+#### Método 2: Con Scoop (Alternativo)
+
+```powershell
+# Instalar Scoop (si no lo tienes)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+# Instalar Supabase CLI
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+```
+
+### 🔧 Configuración Inicial
+
+**1. Login:**
+```bash
+supabase login
+```
+
+**2. Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+supabase link --project-ref zpvtovhomaykvcowbtda
+```
+
+### 📚 Comandos Útiles
+
+#### Migraciones de Base de Datos:
+
+```bash
+# Ver status de migraciones
+supabase db diff
+
+# Aplicar migración
+supabase db push
+
+# Crear nueva migración
+supabase migration new nombre_migracion
+
+# Ver historial de migraciones
+supabase migration list
+```
+
+#### Queries SQL:
+
+```bash
+# Ejecutar query desde terminal
+supabase db query "SELECT * FROM productos LIMIT 5;"
+
+# Ejecutar archivo SQL
+supabase db execute -f database/migrations/001_agregar_multi_tienda.sql
+```
+
+#### Gestión de Datos:
+
+```bash
+# Resetear base de datos local
+supabase db reset
+
+# Seed de datos
+supabase db seed
+
+# Dump de base de datos
+supabase db dump -f backup.sql
+```
+
+#### Ver Estructura:
+
+```bash
+# Ver tablas
+supabase db list
+
+# Inspeccionar tabla
+supabase db inspect productos
+
+# Ver tipos (TypeScript)
+supabase gen types typescript
+```
+
+### 💡 Casos de Uso en Este Proyecto
+
+**1. Ejecutar migraciones:**
+```bash
+# Aplicar migración multi-tienda
+supabase db push database/migrations/001_agregar_multi_tienda.sql
+```
+
+**2. Verificar estructura de tablas:**
+```bash
+supabase db inspect productos
+```
+
+**3. Query rápida para debugging:**
+```bash
+supabase db query "SELECT id, descripcion, stock_mundo_lib, stock_majoli, stock_lili FROM productos LIMIT 10;"
+```
+
+**4. Backup de base de datos:**
+```bash
+supabase db dump -f backup_$(date +%Y%m%d).sql
+```
+
+---
+
+## 🎯 COMPARACIÓN: CLI vs Dashboard Web
+
+### Railway CLI vs Dashboard:
+
+| Tarea | Dashboard Web | Railway CLI |
+|-------|---------------|-------------|
+| Ver variables | 5 clicks | `railway variables` |
+| Cambiar variable | 6 clicks + redeploy | `railway variables set KEY=val` |
+| Ver logs | 4 clicks | `railway logs` |
+| Ver status | 3 clicks | `railway status` |
+
+**Ahorro de tiempo estimado:** 70-80%
+
+### Supabase CLI vs Dashboard:
+
+| Tarea | Dashboard Web | Supabase CLI |
+|-------|---------------|---------------|
+| Ejecutar query | SQL Editor + copiar/pegar | `supabase db query "SELECT..."` |
+| Aplicar migración | Subir archivo + ejecutar | `supabase db push archivo.sql` |
+| Ver estructura | Table Editor + navegar | `supabase db inspect tabla` |
+| Backup | Múltiples pasos | `supabase db dump -f backup.sql` |
+
+**Ahorro de tiempo estimado:** 60-70%
+
+---
+
+## 📝 Checklist de Configuración
+
+### Railway CLI:
+- [x] Instalado (v4.27.2)
+- [x] Login completado
+- [ ] Proyecto vinculado
+- [ ] Probado con `railway status`
+
+### Supabase CLI:
+- [ ] Descargado de GitHub
+- [ ] Ejecutable en PATH
+- [ ] Login completado
+- [ ] Proyecto vinculado
+- [ ] Probado con `supabase db query`
+
+### Vercel CLI:
+- [x] Instalado (v50.5.0)
+- [x] Login completado
+- [x] Proyectos deployados
+- [x] Funcionando correctamente
+
+---
+
+## 🚀 Próximos Pasos (Cuando tengas conexión estable)
+
+1. **Railway CLI:**
+   ```bash
+   railway link
+   railway status
+   railway variables
+   ```
+
+2. **Supabase CLI:**
+   ```bash
+   # Descargar e instalar manualmente
+   supabase login
+   supabase link --project-ref zpvtovhomaykvcowbtda
+   supabase db query "SELECT version();"
+   ```
+
+3. **Probar comandos básicos:**
+   ```bash
+   railway logs --follow
+   supabase db inspect productos
+   ```
+
+---
+
+## 💡 Beneficios para Futuras Sesiones
+
+Con los CLIs configurados, en futuras sesiones podré:
+
+✅ Ver y modificar variables de entorno sin pedirte que vayas al dashboard
+✅ Ver logs en tiempo real para debugging
+✅ Ejecutar migraciones de base de datos directamente
+✅ Hacer queries SQL sin usar el SQL Editor
+✅ Verificar status de deployments instantáneamente
+✅ Ser ~75% más autónomo y eficiente
+
