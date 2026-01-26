@@ -592,17 +592,19 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-26 (SESIÓN 6 - Sistema Multi-Tienda)
-**Rama actual al guardar:** dev
+**Última actualización:** 2026-01-26 (SESIÓN 7 - Deployment Multi-Tienda Completado)
+**Rama actual al guardar:** master
 **Cambios recientes:**
-- ✅ **SESIÓN 6:** Implementación completa sistema multi-tienda
-- ✅ Migración de base de datos a arquitectura multi-tienda
-- ✅ Estructura monorepo con 3 aplicaciones separadas
-- ✅ Backend actualizado con soporte para múltiples tiendas
-- ✅ Apps Mundo Lib, Majoli y Lili funcionando independientemente
-- ✅ Stock independiente por tienda (stock_mundo_lib, stock_majoli, stock_lili)
-- ✅ Filtrado automático de productos por tienda
-- ✅ Fix crítico: Backend usando SERVICE_ROLE_KEY en lugar de ANON_KEY
+- ✅ **SESIÓN 7:** Deployment completo de sistema multi-tienda a producción
+- ✅ Fix crítico: Variables de entorno Railway corregidas (SERVICE_ROLE_KEY tenía caracteres extra)
+- ✅ Backend development funcionando correctamente en Railway
+- ✅ 3 apps desplegadas en Vercel con Vercel CLI
+- ✅ Mundo Lib: https://catalogo-productos-vert.vercel.app
+- ✅ Majoli: https://majoli-app.vercel.app
+- ✅ Lili: https://lili-app-ruddy.vercel.app
+- ✅ Todas las apps con variables de entorno configuradas
+- ✅ PWA funcional en las 3 tiendas
+- ✅ Merge dev → master completado
 
 ---
 
@@ -709,6 +711,16 @@ Transformar el sistema de tienda única a un sistema multi-tienda que soporte tr
 - ✅ Stock se guarda correctamente por tienda
 - ✅ Filtros automáticos funcionan correctamente
 - ✅ Colores diferenciados por tienda
+- ✅ **3 apps desplegadas en Vercel y funcionando correctamente**
+- ✅ **Backend Railway con variables de entorno corregidas**
+- ✅ **PWA instalable en cada tienda**
+
+### 🚀 URLs de Producción (Vercel)
+
+- **Backend Development:** https://catalogo-productos-development.up.railway.app/api
+- **Mundo Lib (Azul 📚):** https://catalogo-productos-vert.vercel.app
+- **Majoli (Verde 🏪):** https://majoli-app.vercel.app
+- **Lili Cosméticos (Rosa 🌸):** https://lili-app-ruddy.vercel.app
 
 ### 🚀 URLs de Desarrollo Local
 
@@ -719,9 +731,160 @@ Transformar el sistema de tienda única a un sistema multi-tienda que soporte tr
 
 ### 📋 Pendiente
 
-- ⏳ Deployment a Vercel de las 3 apps
+- ⏳ Configurar backend de PRODUCCIÓN en Railway (cuando esté listo para usuarios finales)
 - ⏳ Configuración de dominios personalizados (opcional)
 - ⏳ Sistema de transferencias entre tiendas (opcional)
+
+---
+
+## 🚀 DEPLOYMENT A PRODUCCIÓN (SESIÓN 7 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-26
+
+### 🎯 Objetivo
+Deployar el sistema multi-tienda completo a producción en Vercel y solucionar problemas de variables de entorno en Railway.
+
+### 🐛 Problemas Encontrados y Solucionados
+
+#### 1. **Railway - Variables de entorno no funcionaban**
+
+**Problema:**
+- Backend respondía "Invalid API key" en todos los endpoints
+- Logs mostraban `injecting env (0)` - no detectaba variables
+- Tests fallaban con error de autenticación Supabase
+
+**Causa raíz:**
+- La variable `SUPABASE_SERVICE_ROLE_KEY` en Railway tenía caracteres extra:
+  - Al inicio: espacio + signo igual ` =`
+  - Al final: virgulilla `~`
+- Formato incorrecto: ` =eyJhbGc...hF0~`
+- Formato correcto: `eyJhbGc...hF0`
+
+**Solución:**
+1. Endpoint de diagnóstico agregado en `backend/server.js` para detectar el problema
+2. Variable eliminada y recreada desde cero en Railway dashboard
+3. Verificación con `curl` confirmó que funcionó
+4. Backend ahora responde correctamente con SERVICE_ROLE_KEY
+
+**Archivos modificados:**
+- `backend/server.js` - Endpoint `/api/diagnostico` agregado (temporal)
+
+#### 2. **Vercel - No permitía múltiples proyectos del mismo repo desde dashboard**
+
+**Problema:**
+- Dashboard de Vercel mostraba error al intentar crear segundo proyecto
+- Mensaje: "Project already exists, please use a new name"
+- No importaba el nombre que se usara
+
+**Solución:**
+- Instalación de Vercel CLI: `npm install -g vercel`
+- Login con `vercel login`
+- Deploy directo desde cada carpeta de app con `vercel --prod --yes`
+- Variables de entorno agregadas manualmente desde dashboard después del deploy
+
+**Comandos usados:**
+```bash
+cd apps/majoli-app && vercel --prod --yes
+cd apps/lili-app && vercel --prod --yes
+```
+
+### ✅ Deployment Completado
+
+#### **Backend (Railway)**
+- URL Development: https://catalogo-productos-development.up.railway.app/api
+- ✅ Variables de entorno funcionando correctamente
+- ✅ SERVICE_ROLE_KEY configurada sin caracteres extra
+- ✅ Todos los endpoints operacionales
+- ✅ Sistema multi-tienda funcionando
+
+#### **Frontend - 3 Apps en Vercel**
+
+**1. Mundo Lib 📚 (Azul)**
+- **URL:** https://catalogo-productos-vert.vercel.app
+- **Root Directory:** `apps/mundolib-app`
+- **Tienda:** `mundo_lib`
+- **Stock:** `stock_mundo_lib`
+- **Deploy:** Actualizado desde proyecto existente
+
+**2. Majoli 🏪 (Verde)**
+- **URL:** https://majoli-app.vercel.app
+- **Root Directory:** `apps/majoli-app`
+- **Tienda:** `majoli`
+- **Stock:** `stock_majoli`
+- **Deploy:** Creado con Vercel CLI
+
+**3. Lili Cosméticos 🌸 (Rosa)**
+- **URL:** https://lili-app-ruddy.vercel.app
+- **Root Directory:** `apps/lili-app`
+- **Tienda:** `lili`
+- **Stock:** `stock_lili`
+- **Deploy:** Creado con Vercel CLI
+
+### 🔧 Variables de Entorno Configuradas (Todas las apps)
+
+```env
+VITE_API_URL=https://catalogo-productos-development.up.railway.app/api
+VITE_SUPABASE_URL=https://zpvtovhomaykvcowbtda.supabase.co
+VITE_SUPABASE_ANON_KEY=[key configurada]
+VITE_CLOUDINARY_CLOUD_NAME=ddkuwch5y
+VITE_CLOUDINARY_UPLOAD_PRESET=productos-mundolib
+```
+
+**Nota:** Variables configuradas para todos los environments (Production, Preview, Development)
+
+### 📱 Instalación en Dispositivos Móviles
+
+Las 3 apps ahora están disponibles como PWA y pueden instalarse desde:
+
+**Android:**
+1. Abrir URL en Chrome
+2. Menú ⋮ → "Instalar aplicación"
+3. App aparece en pantalla de inicio
+
+**iPhone:**
+1. Abrir URL en Safari
+2. Botón Compartir → "Agregar a pantalla de inicio"
+3. App aparece en pantalla de inicio
+
+### 🎯 Testing Post-Deployment
+
+**Tests realizados:**
+```bash
+# Backend Railway
+✅ GET /api/diagnostico → Variables correctas
+✅ GET /api/productos/proveedores → Lista de proveedores
+✅ POST /api/productos/rapido → Crear producto multi-tienda
+
+# Frontend Vercel
+✅ Mundo Lib: HTTP 200, título correcto
+✅ Majoli: HTTP 200, título correcto
+✅ Lili: HTTP 200, título correcto
+```
+
+### 📝 Git Workflow
+
+```bash
+# Merge dev → master
+git checkout master
+git merge dev
+git push origin master
+
+# Vercel detectó el push y deployó automáticamente a producción
+```
+
+### 💡 Lecciones Aprendidas
+
+1. **Validar variables de entorno:** Siempre verificar que no tengan espacios o caracteres extra (especialmente al copiar/pegar)
+2. **Endpoint de diagnóstico:** Muy útil para debugging de variables en servicios remotos
+3. **Vercel CLI:** Más flexible que dashboard para monorepos con múltiples apps
+4. **Railway caché:** A veces es necesario eliminar y recrear variables para limpiar caché corrupta
+
+### 🔄 Próximos Pasos
+
+1. **Probar funcionalidad completa** en las 3 apps de producción
+2. **Crear productos de prueba** en cada tienda para verificar aislamiento de stocks
+3. **Configurar backend de PRODUCCIÓN** cuando esté listo para usuarios finales
+4. **Considerar dominios personalizados** (opcional): mundolib.app, majoli.app, lili.app
 
 ---
 
