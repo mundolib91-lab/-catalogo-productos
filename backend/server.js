@@ -1176,6 +1176,22 @@ app.get('/', (req, res) => {
   });
 });
 
+// 21. Endpoint de diagnóstico (temporal)
+app.get('/api/diagnostico', (req, res) => {
+  res.json({
+    success: true,
+    env_check: {
+      SUPABASE_URL: process.env.SUPABASE_URL ? '✅ Configurada' : '❌ No configurada',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurada' : '❌ No configurada',
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? '✅ Configurada' : '❌ No configurada',
+      PORT: process.env.PORT || 'default 5000',
+      // Primeros caracteres para verificar (sin exponer la key completa)
+      url_preview: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 30) + '...' : 'N/A',
+      key_preview: process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...' : 'N/A'
+    }
+  });
+});
+
 // Iniciar servidor
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
