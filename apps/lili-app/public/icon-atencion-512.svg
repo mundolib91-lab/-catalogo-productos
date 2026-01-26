@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo azul -->
+  <rect width="512" height="512" rx="128" fill="#3b82f6"/>
+
+  <!-- Letra A en blanco -->
+  <text x="256" y="380" font-size="320" font-weight="bold" fill="white" text-anchor="middle" font-family="Arial, sans-serif">A</text>
+</svg>

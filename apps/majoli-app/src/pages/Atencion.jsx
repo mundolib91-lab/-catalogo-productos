@@ -1,0 +1,404 @@
+import { useState, useEffect } from 'react';
+import { getProductosPorEstado, reportarFaltante as reportarFaltanteAPI } from '../utils/api';
+import { useTheme } from '../hooks/useTheme';
+import DetalleProducto from '../components/DetalleProducto';
+import UsosProducto from '../components/UsosProducto';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
+import MenuReportarFaltantes from '../components/MenuReportarFaltantes';
+import FormularioProductoNuevo from '../components/FormularioProductoNuevo';
+import FormularioGrupoRepisa from '../components/FormularioGrupoRepisa';
+import FormularioReportarExistente from '../components/FormularioReportarExistente';
+import APP_CONFIG from '../config';
+
+function Atencion({ menuHamburguesa }) {
+  const { theme, toggleTheme } = useTheme();
+  const { toast, success, error: mostrarError, cerrarToast } = useToast();
+  const [productos, setProductos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+
+  // Filtros
+  const [soloFaltantes, setSoloFaltantes] = useState(false);
+
+  // Modales
+  const [productoDetalle, setProductoDetalle] = useState(null);
+  const [productoUsos, setProductoUsos] = useState(null);
+
+  // Menu reportar faltantes
+  const [menuFaltantesAbierto, setMenuFaltantesAbierto] = useState(false);
+  const [formularioNuevoAbierto, setFormularioNuevoAbierto] = useState(false);
+  const [formularioGrupoAbierto, setFormularioGrupoAbierto] = useState(false);
+  const [formularioExistenteAbierto, setFormularioExistenteAbierto] = useState(false);
+  const [productoAReportar, setProductoAReportar] = useState(null);
+
+  useEffect(() => {
+    cargarProductos();
+  }, [busqueda, soloFaltantes]);
+
+  const cargarProductos = async () => {
+    setLoading(true);
+    try {
+      // Traer productos existentes Y completados en paralelo
+      const [responseExistente, responseCompletado] = await Promise.all([
+        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda }),
+        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda })
+      ]);
+
+      // Combinar ambos arrays
+      let productosData = [
+        ...(responseExistente.data || []),
+        ...(responseCompletado.data || [])
+      ];
+
+      // Filtrar productos que tengan los datos mínimos necesarios para vender
+      productosData = productosData.filter(p => {
+        const tieneImagen = p.imagen && p.imagen.trim() !== '';
+        const tienePrecioVenta = p.precio_venta_unidad != null && p.precio_venta_unidad > 0;
+        const tienePrecioCompra = p.precio_compra_unidad != null && p.precio_compra_unidad > 0;
+        const tieneDescripcion = p.descripcion && p.descripcion.trim() !== '';
+        // Usar stock de la tienda actual
+        const stockTienda = p[APP_CONFIG.campo_stock];
+        const tieneStock = stockTienda != null && stockTienda > 0;
+
+        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion && tieneStock;
+      });
+
+      // Filtrar solo faltantes si está activado
+      if (soloFaltantes) {
+        productosData = productosData.filter(p => p.faltante_reportado === true);
+      }
+
+      setProductos(productosData);
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const abrirFormularioReportarExistente = (productoId) => {
+    // Buscar el producto en la lista actual
+    const producto = productos.find(p => p.id === productoId);
+    if (!producto) {
+      mostrarError('Producto no encontrado');
+      return;
+    }
+
+    setProductoAReportar(producto);
+    setFormularioExistenteAbierto(true);
+  };
+
+  const reportarFaltante = async ({ productoId, prioridad, notas }) => {
+    try {
+      // Buscar el producto en la lista actual
+      const producto = productos.find(p => p.id === productoId);
+      if (!producto) {
+        mostrarError('Producto no encontrado');
+        return;
+      }
+
+      // Crear faltante tipo 'existente'
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/faltantes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: 'existente',
+          producto_id: productoId,
+          descripcion: producto.descripcion || producto.nombre,
+          imagen: producto.imagen,
+          prioridad: prioridad,
+          notas: notas,
+          origen: 'atencion_cliente',
+          tienda: APP_CONFIG.tienda
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al reportar faltante');
+      }
+
+      success('Faltante reportado correctamente');
+      cargarProductos();
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al reportar faltante');
+    }
+  };
+
+  const handleSeleccionarTipoFaltante = (tipo) => {
+    setMenuFaltantesAbierto(false);
+
+    if (tipo === 'nuevo') {
+      setFormularioNuevoAbierto(true);
+    } else if (tipo === 'grupo') {
+      setFormularioGrupoAbierto(true);
+    }
+  };
+
+  const handleSubmitFaltante = async (dataFaltante) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/faltantes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...dataFaltante,
+          origen: 'atencion_cliente',
+          tienda: APP_CONFIG.tienda
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al reportar faltante');
+      }
+
+      success('Faltante reportado exitosamente');
+
+      // Recargar productos si estaba en filtro de faltantes
+      if (soloFaltantes) {
+        cargarProductos();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      mostrarError('Error al reportar faltante');
+      throw error;
+    }
+  };
+
+  return (
+    <>
+      {toast && (
+        <Toast
+          mensaje={toast.mensaje}
+          tipo={toast.tipo}
+          onClose={cerrarToast}
+        />
+      )}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        {/* Header */}
+      <div className="bg-blue-500 dark:bg-blue-700 text-white p-4 shadow-lg relative">
+        {/* Menú hamburguesa (solo en móvil) */}
+        {menuHamburguesa}
+
+        <h1 className="text-2xl md:text-2xl font-bold text-center">
+          Atención al Cliente
+        </h1>
+
+        {/* Botón de tema */}
+        <button
+          onClick={toggleTheme}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors"
+          aria-label="Cambiar tema"
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+      </div>
+
+      {/* Buscador */}
+      <div className="max-w-6xl mx-auto px-4 mt-6">
+        <input
+          type="text"
+          placeholder="🔍 Buscar producto..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full px-6 py-4 text-2xl border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+        />
+      </div>
+
+      {/* Filtros */}
+      <div className="max-w-6xl mx-auto px-4 mt-4">
+        <div className="flex gap-2 items-center flex-wrap">
+          <span className="text-lg text-gray-600 dark:text-gray-400">Filtros:</span>
+
+          <button
+            onClick={() => setSoloFaltantes(!soloFaltantes)}
+            className={`px-4 py-2 rounded-full text-lg font-bold transition-colors ${
+              soloFaltantes
+                ? 'bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            Solo Faltantes
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de Productos */}
+      <div className="max-w-6xl mx-auto px-2 py-3">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando productos...</p>
+          </div>
+        ) : productos.length === 0 ? (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
+            <p className="text-3xl">📦</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-4">
+              {soloFaltantes ? 'No hay productos faltantes' : 'No hay productos disponibles'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {productos.map((producto) => (
+              <ProductoCard
+                key={producto.id}
+                producto={producto}
+                onVerDetalles={() => setProductoDetalle(producto)}
+                onVerUsos={() => setProductoUsos(producto)}
+                onReportarFaltante={() => abrirFormularioReportarExistente(producto.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal Detalle Producto */}
+      {productoDetalle && (
+        <DetalleProducto
+          producto={productoDetalle}
+          onCerrar={() => setProductoDetalle(null)}
+        />
+      )}
+
+      {/* Pantalla Usos */}
+      {productoUsos && (
+        <UsosProducto
+          producto={productoUsos}
+          onVolver={() => setProductoUsos(null)}
+        />
+      )}
+
+      {/* Botón flotante [+] para reportar faltantes */}
+      <button
+        onClick={() => setMenuFaltantesAbierto(true)}
+        className="fixed bottom-6 right-6 w-16 h-16 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all active:scale-95 z-30"
+        aria-label="Reportar faltante"
+      >
+        +
+      </button>
+    </div>
+
+    {/* Menú reportar faltantes */}
+    <MenuReportarFaltantes
+      isOpen={menuFaltantesAbierto}
+      onClose={() => setMenuFaltantesAbierto(false)}
+      onSelectTipo={handleSeleccionarTipoFaltante}
+    />
+
+    {/* Formulario Producto Nuevo */}
+    <FormularioProductoNuevo
+      isOpen={formularioNuevoAbierto}
+      onClose={() => setFormularioNuevoAbierto(false)}
+      onSubmit={handleSubmitFaltante}
+    />
+
+    {/* Formulario Grupo/Repisa */}
+    <FormularioGrupoRepisa
+      isOpen={formularioGrupoAbierto}
+      onClose={() => setFormularioGrupoAbierto(false)}
+      onSubmit={handleSubmitFaltante}
+    />
+
+    {/* Formulario Reportar Producto Existente */}
+    <FormularioReportarExistente
+      isOpen={formularioExistenteAbierto}
+      onClose={() => {
+        setFormularioExistenteAbierto(false);
+        setProductoAReportar(null);
+      }}
+      producto={productoAReportar}
+      onSubmit={reportarFaltante}
+    />
+    </>
+  );
+}
+
+// Componente Card de Producto - MUY OPTIMIZADO
+function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }) {
+  const tienePreciosMayor = producto.precios_por_mayor && producto.precios_por_mayor.length > 0;
+  const yaReportado = producto.faltante_reportado === true;
+
+  return (
+    <div className={`rounded-lg border p-1 shadow relative ${
+      yaReportado
+        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+    }`}>
+      {/* Badge faltante reportado */}
+      {yaReportado && (
+        <div className="absolute top-0.5 right-0.5 bg-red-600 dark:bg-red-800 text-white px-1.5 py-0.5 rounded text-[10px] font-bold z-10">
+          Faltante
+        </div>
+      )}
+
+      {/* Imagen MUCHO más grande */}
+      <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 rounded-md mb-1 flex items-center justify-center overflow-hidden relative">
+        {producto.imagen ? (
+          <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-5xl text-gray-400 dark:text-gray-500">📦</span>
+        )}
+
+        {/* Ícono precios por mayor */}
+        {tienePreciosMayor && (
+          <div className="absolute top-0.5 right-0.5 bg-blue-500 dark:bg-blue-600 rounded-full p-0.5 text-xl">
+            📦
+          </div>
+        )}
+      </div>
+
+      {/* Info súper compacta */}
+      <div className="px-1">
+        <p className="text-lg text-gray-700 dark:text-gray-300 mb-0.5 line-clamp-2 font-medium">
+          {producto.descripcion}
+        </p>
+        <p className="text-base text-gray-500 dark:text-gray-500 mb-1">
+          {producto.marca || 'Sin marca'}
+        </p>
+
+        {/* Precio súper compacto */}
+        <div className="bg-green-50 dark:bg-green-900/30 rounded px-2 py-1 mb-1">
+          <p className="text-center text-2xl font-bold text-green-700 dark:text-green-400">
+            Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
+          </p>
+        </div>
+
+        {/* Botón Ver Usos súper compacto */}
+        <button
+          onClick={onVerUsos}
+          className="w-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 py-1 rounded mb-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-lg"
+        >
+          Ver Usos
+        </button>
+
+        {/* Botones de acción súper pequeños */}
+        <div className="grid grid-cols-2 gap-1">
+          <button
+            onClick={onVerDetalles}
+            className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 py-1 rounded font-bold hover:bg-blue-200 dark:hover:bg-blue-900/60 text-base"
+          >
+            Detalles
+          </button>
+
+          <button
+            onClick={onReportarFaltante}
+            disabled={yaReportado}
+            className={`py-1 rounded font-bold text-base transition-colors ${
+              yaReportado
+                ? 'bg-red-400 dark:bg-red-500 text-white cursor-not-allowed opacity-90'
+                : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
+            }`}
+          >
+            {yaReportado ? '⚠️ Reportado' : 'Reportar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Atencion;

@@ -592,9 +592,140 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-25 (Sesión noche - SESIÓN 5)
+**Última actualización:** 2026-01-26 (SESIÓN 6 - Sistema Multi-Tienda)
 **Rama actual al guardar:** dev
 **Cambios recientes:**
+- ✅ **SESIÓN 6:** Implementación completa sistema multi-tienda
+- ✅ Migración de base de datos a arquitectura multi-tienda
+- ✅ Estructura monorepo con 3 aplicaciones separadas
+- ✅ Backend actualizado con soporte para múltiples tiendas
+- ✅ Apps Mundo Lib, Majoli y Lili funcionando independientemente
+- ✅ Stock independiente por tienda (stock_mundo_lib, stock_majoli, stock_lili)
+- ✅ Filtrado automático de productos por tienda
+- ✅ Fix crítico: Backend usando SERVICE_ROLE_KEY en lugar de ANON_KEY
+
+---
+
+## 🏪 SISTEMA MULTI-TIENDA (SESIÓN 6 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-26
+
+### 🎯 Objetivo
+Transformar el sistema de tienda única a un sistema multi-tienda que soporte tres tiendas independientes: Mundo Lib, Majoli y Lili.
+
+### ✅ Implementación Completada
+
+#### 1. **Migración de Base de Datos**
+   - Agregadas columnas `stock_mundo_lib`, `stock_majoli`, `stock_lili` a tabla `productos`
+   - Agregada columna `tienda_origen` para identificar tienda de creación
+   - Columna calculada `stock_total` (suma de stocks de todas las tiendas)
+   - Tabla `transferencias` para mover productos entre tiendas
+   - Campo `tienda` agregado a tabla `faltantes`
+   - **Archivo:** `database/migrations/001_agregar_multi_tienda.sql`
+
+#### 2. **Estructura Monorepo**
+   ```
+   catalogo-productos/
+   ├── apps/
+   │   ├── mundolib-app/    # App Mundo Lib
+   │   ├── majoli-app/      # App Majoli
+   │   └── lili-app/        # App Lili
+   ├── backend/             # Backend compartido
+   └── frontend/            # App original (deprecated)
+   ```
+
+#### 3. **Configuración por Tienda**
+   Cada app tiene su propio `config.js`:
+   ```javascript
+   export const APP_CONFIG = {
+     nombre: 'Mundo Lib',
+     tienda: 'mundo_lib',
+     campo_stock: 'stock_mundo_lib',
+     color_primario: '#3B82F6', // Azul
+     emoji: '📚'
+   }
+   ```
+
+#### 4. **Backend Multi-Tienda**
+
+   **Endpoints Actualizados:**
+   - `/api/productos/rapido` - Crea productos con stock por tienda
+   - `/api/productos/estado/:estado` - Filtra por stock de tienda específica
+   - Todos los endpoints actualizados para soportar parámetro `tienda`
+
+   **Fix Crítico - Permisos Supabase:**
+   - **Problema:** Backend usaba `SUPABASE_ANON_KEY` (permisos limitados)
+   - **Solución:** Cambio a `SUPABASE_SERVICE_ROLE_KEY` (permisos completos)
+   - **Archivo:** `backend/.env` y `backend/server.js`
+
+   **Estrategia INSERT/UPDATE:**
+   - INSERT producto base sin stock
+   - UPDATE separado para agregar stock
+   - Evita conflictos con DEFAULT constraints
+
+#### 5. **Frontend - Cambios por App**
+
+   **Registro.jsx:**
+   - Campo de cantidad usa dinámicamente `APP_CONFIG.campo_stock`
+   - API calls incluyen parámetro `tienda` para filtrado
+   - Solo muestra productos con stock > 0 en tienda actual
+
+   **Atencion.jsx:**
+   - Filtrado automático por tienda
+   - Solo muestra productos disponibles en la tienda actual
+
+   **FormularioCompleto.jsx:**
+   - Muestra y permite editar solo el stock de la tienda actual
+   - Lectura de stocks de otras tiendas (informativo)
+
+#### 6. **Colores por Tienda**
+   - **Mundo Lib:** Azul (#3B82F6) 📚
+   - **Majoli:** Verde (#10B981) 🏪
+   - **Lili:** Rosa (#EC4899) 🌸
+
+### 🔧 Archivos Principales Modificados
+
+1. **Backend:**
+   - `backend/server.js` - Endpoints multi-tienda
+   - `backend/.env` - SERVICE_ROLE_KEY agregada
+
+2. **Database:**
+   - `database/migrations/001_agregar_multi_tienda.sql`
+   - `database/INSTRUCCIONES_MIGRACION.md`
+
+3. **Apps:**
+   - `apps/mundolib-app/src/config.js`
+   - `apps/majoli-app/src/config.js`
+   - `apps/lili-app/src/config.js`
+   - `apps/*/src/pages/Registro.jsx`
+   - `apps/*/src/pages/Atencion.jsx`
+   - `apps/*/src/pages/FormularioCompleto.jsx`
+
+### ✅ Funcionalidades Verificadas
+
+- ✅ Crear producto en Mundo Lib → Solo visible en Mundo Lib
+- ✅ Crear producto en Majoli → Solo visible en Majoli
+- ✅ Crear producto en Lili → Solo visible en Lili
+- ✅ Stock se guarda correctamente por tienda
+- ✅ Filtros automáticos funcionan correctamente
+- ✅ Colores diferenciados por tienda
+
+### 🚀 URLs de Desarrollo Local
+
+- Backend: http://localhost:5000
+- Mundo Lib: http://localhost:5189
+- Majoli: http://localhost:5190
+- Lili: http://localhost:5191
+
+### 📋 Pendiente
+
+- ⏳ Deployment a Vercel de las 3 apps
+- ⏳ Configuración de dominios personalizados (opcional)
+- ⏳ Sistema de transferencias entre tiendas (opcional)
+
+---
+
+**SESIONES ANTERIORES:**
 - ✅ **SESIÓN 5:** Mejoras Central Faltantes + Simplificación filtros Atención + Refinamiento Registro
 - ✅ Modal detalle completo en faltantes
 - ✅ Botones directos para cambio de estado (elimina navegación consecutiva)

@@ -10,10 +10,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Configurar Supabase
+// Configurar Supabase con SERVICE_ROLE_KEY para permisos completos
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // ==================== ENDPOINTS ====================
@@ -193,10 +193,18 @@ app.put('/api/marcas/:nombreViejo/renombrar', async (req, res) => {
 
 // ==================== RUTAS GENERALES ====================
 
-// 1. Obtener todos los productos (con paginación)
+// 1. Obtener todos los productos (con paginación y filtro por tienda)
 app.get('/api/productos', async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = '' } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      search = '',
+      tienda = null,           // NUEVO: filtrar por tienda
+      stock_minimo = null,      // NUEVO: solo productos con stock > X
+      estado_registro = null    // Filtro por estado
+    } = req.query;
+
     const offset = (page - 1) * limit;
 
     let query = supabase
@@ -208,6 +216,22 @@ app.get('/api/productos', async (req, res) => {
     // Búsqueda por nombre o descripción
     if (search) {
       query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%`);
+    }
+
+    // NUEVO: Filtrar por tienda (stock disponible)
+    if (tienda) {
+      if (tienda === 'mundo_lib') {
+        query = query.gt('stock_mundo_lib', stock_minimo || 0);
+      } else if (tienda === 'majoli') {
+        query = query.gt('stock_majoli', stock_minimo || 0);
+      } else if (tienda === 'lili') {
+        query = query.gt('stock_lili', stock_minimo || 0);
+      }
+    }
+
+    // Filtrar por estado de registro
+    if (estado_registro) {
+      query = query.eq('estado_registro', estado_registro);
     }
 
     const { data, error, count } = await query;
@@ -392,7 +416,7 @@ app.get('/api/reportes/stock-bajo', async (req, res) => {
 app.get('/api/productos/estado/:estado', async (req, res) => {
   try {
     const { estado } = req.params; // proceso, completado, existente
-    const { page = 1, limit = 20, search = '' } = req.query;
+    const { page = 1, limit = 20, search = '', tienda = null } = req.query;
     const offset = (page - 1) * limit;
 
     let query = supabase
@@ -405,6 +429,17 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
     // Búsqueda
     if (search) {
       query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
+    }
+
+    // Filtrar por tienda (solo productos con stock > 0 en esa tienda)
+    if (tienda) {
+      if (tienda === 'mundo_lib') {
+        query = query.gt('stock_mundo_lib', 0);
+      } else if (tienda === 'majoli') {
+        query = query.gt('stock_majoli', 0);
+      } else if (tienda === 'lili') {
+        query = query.gt('stock_lili', 0);
+      }
     }
 
     const { data, error, count } = await query;
@@ -482,12 +517,19 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     const productoFinal = { ...productoActual, ...updates };
 
     // Validar que tenga TODOS los datos mínimos requeridos
+    // Para stock, verificar que al menos una tienda tenga stock > 0
+    const tieneStock = (
+      (productoFinal.stock_mundo_lib != null && productoFinal.stock_mundo_lib > 0) ||
+      (productoFinal.stock_majoli != null && productoFinal.stock_majoli > 0) ||
+      (productoFinal.stock_lili != null && productoFinal.stock_lili > 0)
+    );
+
     const validaciones = {
       imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
       precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
       precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0,
       descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
-      stock: productoFinal.cantidad_ingresada != null && productoFinal.cantidad_ingresada > 0
+      stock: tieneStock
     };
 
     // Verificar si falta algún campo
@@ -533,28 +575,70 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 // 10. Crear producto con datos mínimos (para "en proceso")
 app.post('/api/productos/rapido', async (req, res) => {
   try {
-    const { imagen, descripcion, cantidad_ingresada } = req.body;
+    // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock
+    // Esto evita cualquier problema con DEFAULT en el INSERT
 
-    // Crear producto con datos mínimos
-    const productoData = {
-      imagen,
-      nombre: descripcion, // Usar descripción como nombre temporal
-      descripcion,
-      cantidad_ingresada: parseInt(cantidad_ingresada),
+    // 1. Insertar producto base SIN stock
+    const productoBase = {
+      nombre: req.body.descripcion,
+      descripcion: req.body.descripcion,
+      imagen: req.body.imagen || '',
       estado_registro: 'proceso',
       fecha_ingreso: new Date().toISOString()
     };
 
-    const { data, error } = await supabase
+    const { data: newProducto, error: insertError } = await supabase
       .from('productos')
-      .insert([productoData])
+      .insert([productoBase])
       .select()
       .single();
 
-    if (error) throw error;
+    if (insertError) {
+      throw insertError;
+    }
 
-    res.status(201).json({ success: true, data });
+    // 2. Actualizar con stock en una operación separada
+    const updateData = {};
+
+    if (req.body.stock_mundo_lib !== undefined && req.body.stock_mundo_lib !== null) {
+      updateData.stock_mundo_lib = parseInt(req.body.stock_mundo_lib, 10);
+    }
+    if (req.body.stock_majoli !== undefined && req.body.stock_majoli !== null) {
+      updateData.stock_majoli = parseInt(req.body.stock_majoli, 10);
+    }
+    if (req.body.stock_lili !== undefined && req.body.stock_lili !== null) {
+      updateData.stock_lili = parseInt(req.body.stock_lili, 10);
+    }
+
+    // Solo hacer UPDATE si hay datos de stock
+    if (Object.keys(updateData).length > 0) {
+      // Primero hacer el UPDATE
+      const { error: updateError } = await supabase
+        .from('productos')
+        .update(updateData)
+        .eq('id', newProducto.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Luego hacer un SELECT separado para obtener el producto actualizado
+      const { data: updatedProducto, error: selectError } = await supabase
+        .from('productos')
+        .select()
+        .eq('id', newProducto.id)
+        .single();
+
+      if (selectError) {
+        throw selectError;
+      }
+
+      return res.status(201).json({ success: true, data: updatedProducto });
+    }
+
+    res.status(201).json({ success: true, data: newProducto });
   } catch (error) {
+    console.error('Error al crear producto:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -700,7 +784,7 @@ app.post('/api/productos/lote', async (req, res) => {
 // 14. Crear reporte de faltante
 app.post('/api/faltantes', async (req, res) => {
   try {
-    const { tipo, imagen, descripcion, prioridad, notas, origen, producto_id } = req.body;
+    const { tipo, imagen, descripcion, prioridad, notas, origen, producto_id, tienda = 'mundo_lib' } = req.body;
 
     // Validar campos requeridos
     if (!tipo || !descripcion || !prioridad || !origen) {
@@ -726,6 +810,14 @@ app.post('/api/faltantes', async (req, res) => {
       });
     }
 
+    // Validar tienda
+    if (!['mundo_lib', 'majoli', 'lili'].includes(tienda)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tienda inválida. Debe ser: mundo_lib, majoli, o lili'
+      });
+    }
+
     // Construir objeto de datos
     const faltanteData = {
       tipo,
@@ -735,7 +827,8 @@ app.post('/api/faltantes', async (req, res) => {
       imagen,
       descripcion,
       notas: notas || null,
-      fecha_reporte: new Date().toISOString()
+      fecha_reporte: new Date().toISOString(),
+      tienda
     };
 
     // Si es tipo 'existente', copiar datos del producto
@@ -796,7 +889,7 @@ app.post('/api/faltantes', async (req, res) => {
 // 15. Obtener todos los faltantes (con filtros)
 app.get('/api/faltantes', async (req, res) => {
   try {
-    const { estado, tipo, origen, prioridad, page = 1, limit = 20 } = req.query;
+    const { estado, tipo, origen, prioridad, tienda, page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
 
     let query = supabase
@@ -810,6 +903,7 @@ app.get('/api/faltantes', async (req, res) => {
     if (tipo) query = query.eq('tipo', tipo);
     if (origen) query = query.eq('origen', origen);
     if (prioridad) query = query.eq('prioridad', prioridad);
+    if (tienda) query = query.eq('tienda', tienda);
 
     const { data, error, count } = await query;
 
@@ -929,12 +1023,156 @@ app.put('/api/faltantes/:id/estado', async (req, res) => {
   }
 });
 
-// 18. Endpoint de prueba
+// ==================== TRANSFERENCIAS ENTRE TIENDAS ====================
+
+// 18. Crear transferencia de productos entre tiendas
+app.post('/api/transferencias', async (req, res) => {
+  try {
+    const { producto_id, origen, destino, cantidad, notas, usuario = 'Sistema' } = req.body;
+
+    // Validar datos
+    if (!producto_id || !origen || !destino || !cantidad) {
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan datos requeridos: producto_id, origen, destino, cantidad'
+      });
+    }
+
+    // Validar que origen y destino sean diferentes
+    if (origen === destino) {
+      return res.status(400).json({
+        success: false,
+        error: 'Origen y destino deben ser diferentes'
+      });
+    }
+
+    // Validar tiendas válidas
+    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
+    if (!tiendasValidas.includes(origen) || !tiendasValidas.includes(destino)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tienda inválida. Valores permitidos: mundo_lib, majoli, lili'
+      });
+    }
+
+    // 1. Obtener producto actual
+    const { data: producto, error: errorProducto } = await supabase
+      .from('productos')
+      .select('*')
+      .eq('id', producto_id)
+      .single();
+
+    if (errorProducto) throw errorProducto;
+
+    if (!producto) {
+      return res.status(404).json({
+        success: false,
+        error: 'Producto no encontrado'
+      });
+    }
+
+    // 2. Validar stock disponible en origen
+    const stockOrigen = producto[`stock_${origen}`];
+    if (cantidad > stockOrigen) {
+      return res.status(400).json({
+        success: false,
+        error: `Stock insuficiente en ${origen}. Disponible: ${stockOrigen}, Solicitado: ${cantidad}`
+      });
+    }
+
+    // 3. Calcular nuevos stocks
+    const nuevoStockOrigen = stockOrigen - cantidad;
+    const nuevoStockDestino = producto[`stock_${destino}`] + cantidad;
+
+    // 4. Actualizar stocks del producto
+    const updates = {};
+    updates[`stock_${origen}`] = nuevoStockOrigen;
+    updates[`stock_${destino}`] = nuevoStockDestino;
+
+    const { error: errorUpdate } = await supabase
+      .from('productos')
+      .update(updates)
+      .eq('id', producto_id);
+
+    if (errorUpdate) throw errorUpdate;
+
+    // 5. Registrar transferencia en historial
+    const { data: transferencia, error: errorTransferencia } = await supabase
+      .from('transferencias')
+      .insert([{
+        producto_id,
+        origen,
+        destino,
+        cantidad,
+        notas,
+        usuario
+      }])
+      .select()
+      .single();
+
+    if (errorTransferencia) throw errorTransferencia;
+
+    res.json({
+      success: true,
+      data: transferencia,
+      mensaje: `${cantidad} unidades transferidas de ${origen} a ${destino}`,
+      stocks_actualizados: {
+        [origen]: nuevoStockOrigen,
+        [destino]: nuevoStockDestino
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error en transferencia:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 19. Obtener historial de transferencias
+app.get('/api/transferencias', async (req, res) => {
+  try {
+    const { producto_id, tienda, limit = 50 } = req.query;
+
+    let query = supabase
+      .from('transferencias')
+      .select(`
+        *,
+        productos (
+          id,
+          descripcion,
+          marca,
+          imagen
+        )
+      `)
+      .order('fecha', { ascending: false })
+      .limit(parseInt(limit));
+
+    // Filtrar por producto específico
+    if (producto_id) {
+      query = query.eq('producto_id', producto_id);
+    }
+
+    // Filtrar por tienda (transferencias donde participó)
+    if (tienda) {
+      query = query.or(`origen.eq.${tienda},destino.eq.${tienda}`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('❌ Error al obtener transferencias:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 20. Endpoint de prueba
 app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'API de Catálogo de Productos funcionando correctamente',
-    version: '1.0.0'
+    version: '2.0.0 - Multi-tienda'
   });
 });
 
