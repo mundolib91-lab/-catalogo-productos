@@ -52,6 +52,10 @@ function FormularioLoteProveedor({ isOpen, onClose, onSubmitLote }) {
       nuevosErrores.descripcion = 'La descripción es obligatoria';
     }
 
+    if (!productoActual.cantidad || parseInt(productoActual.cantidad) <= 0) {
+      nuevosErrores.cantidad = 'La cantidad es obligatoria y debe ser mayor a 0';
+    }
+
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
   };
@@ -395,14 +399,19 @@ function FormularioLoteProveedor({ isOpen, onClose, onSubmitLote }) {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
-                        Cantidad
+                        Cantidad <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
                         value={productoActual.cantidad}
                         onChange={(e) => setProductoActual({ ...productoActual, cantidad: e.target.value })}
-                        className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 dark:text-white"
+                        className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 dark:text-white ${
+                          errores.cantidad ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                       />
+                      {errores.cantidad && (
+                        <p className="text-red-600 text-base mt-1">{errores.cantidad}</p>
+                      )}
                     </div>
 
                     <div>
