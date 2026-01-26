@@ -704,12 +704,13 @@ app.get('/api/productos/faltantes/lista', async (req, res) => {
 // Crear lote de productos (por proveedor o por marca)
 app.post('/api/productos/lote', async (req, res) => {
   try {
-    const { tipo, proveedor, marca, productos } = req.body;
+    const { tipo, proveedor, marca, productos, tienda } = req.body;
 
     console.log('📦 Recibiendo lote de productos:', {
       tipo,
       proveedor,
       marca,
+      tienda,
       cantidadProductos: productos?.length
     });
 
@@ -724,16 +725,27 @@ app.post('/api/productos/lote', async (req, res) => {
 
     // Preparar productos para insertar
     const productosParaInsertar = productos.map((producto, index) => {
+      const cantidad = parseInt(producto.cantidad) || 0;
+
       const productoBase = {
         imagen: producto.imagen || '',
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
-        cantidad_ingresada: parseInt(producto.cantidad) || 0,
+        cantidad_ingresada: cantidad,
         precio_compra_unidad: parseFloat(producto.precio_compra) || 0,
         precio_venta_unidad: producto.precio_venta ? parseFloat(producto.precio_venta) : null,
         estado_registro: 'proceso',
         created_at: new Date().toISOString()
       };
+
+      // Asignar stock al campo específico de la tienda
+      if (tienda === 'mundo_lib') {
+        productoBase.stock_mundo_lib = cantidad;
+      } else if (tienda === 'majoli') {
+        productoBase.stock_majoli = cantidad;
+      } else if (tienda === 'lili') {
+        productoBase.stock_lili = cantidad;
+      }
 
       // Asignar proveedor o marca según el tipo
       if (tipo === 'proveedor' && proveedor) {
@@ -747,6 +759,7 @@ app.post('/api/productos/lote', async (req, res) => {
       console.log(`  Producto ${index + 1}:`, {
         descripcion: productoBase.descripcion,
         cantidad: productoBase.cantidad_ingresada,
+        stock_tienda: cantidad,
         precio: productoBase.precio_compra_unidad
       });
 
