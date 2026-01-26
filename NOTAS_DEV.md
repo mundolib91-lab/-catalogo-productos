@@ -592,19 +592,22 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-26 (SESIÓN 7 - Deployment Multi-Tienda Completado)
+**Última actualización:** 2026-01-26 (SESIÓN 7 - Deployment y Personalización Completados)
 **Rama actual al guardar:** master
 **Cambios recientes:**
 - ✅ **SESIÓN 7:** Deployment completo de sistema multi-tienda a producción
 - ✅ Fix crítico: Variables de entorno Railway corregidas (SERVICE_ROLE_KEY tenía caracteres extra)
 - ✅ Backend development funcionando correctamente en Railway
 - ✅ 3 apps desplegadas en Vercel con Vercel CLI
-- ✅ Mundo Lib: https://catalogo-productos-vert.vercel.app
-- ✅ Majoli: https://majoli-app.vercel.app
-- ✅ Lili: https://lili-app-ruddy.vercel.app
+- ✅ Iconos SVG personalizados para cada tienda (amarillo M, verde M, rosa L)
+- ✅ Nombres y colores de tema únicos por tienda
+- ✅ Limpieza de proyectos duplicados (eliminado catalogo-productos)
+- ✅ URLs finales:
+  - Mundo Lib: https://mundolib-app.vercel.app
+  - Majoli: https://majoli-app.vercel.app
+  - Lili: https://lili-app-ruddy.vercel.app
 - ✅ Todas las apps con variables de entorno configuradas
-- ✅ PWA funcional en las 3 tiendas
-- ✅ Merge dev → master completado
+- ✅ PWA funcional con iconos diferenciados en las 3 tiendas
 
 ---
 
@@ -718,8 +721,8 @@ Transformar el sistema de tienda única a un sistema multi-tienda que soporte tr
 ### 🚀 URLs de Producción (Vercel)
 
 - **Backend Development:** https://catalogo-productos-development.up.railway.app/api
-- **Mundo Lib (Azul 📚):** https://catalogo-productos-vert.vercel.app
-- **Majoli (Verde 🏪):** https://majoli-app.vercel.app
+- **Mundo Lib (Amarillo 🟡):** https://mundolib-app.vercel.app
+- **Majoli (Verde 🟢):** https://majoli-app.vercel.app
 - **Lili Cosméticos (Rosa 🌸):** https://lili-app-ruddy.vercel.app
 
 ### 🚀 URLs de Desarrollo Local
@@ -885,6 +888,118 @@ git push origin master
 2. **Crear productos de prueba** en cada tienda para verificar aislamiento de stocks
 3. **Configurar backend de PRODUCCIÓN** cuando esté listo para usuarios finales
 4. **Considerar dominios personalizados** (opcional): mundolib.app, majoli.app, lili.app
+
+---
+
+## 🎨 PERSONALIZACIÓN DE ICONOS Y LIMPIEZA (SESIÓN 7 - Continuación)
+
+### 🐛 Problema Identificado
+
+Después del deployment inicial, todas las apps mostraban:
+- ❌ Mismo icono amarillo con letra "R"
+- ❌ Mismo nombre "Mundo Lib" en PWA
+- ❌ Mismos colores de tema
+
+**Causa:** Al crear las apps de Majoli y Lili, se copiaron los archivos de Mundo Lib sin personalizar.
+
+### ✅ Solución Implementada
+
+#### 1. **Creación de Iconos SVG Personalizados**
+
+Se crearon 3 iconos SVG únicos:
+- **Mundo Lib:** Fondo amarillo (#F59E0B) con letra "M" blanca
+- **Majoli:** Fondo verde (#10B981) con letra "M" blanca
+- **Lili:** Fondo rosa (#EC4899) con letra "L" blanca
+
+**Archivos creados:**
+```
+apps/mundolib-app/public/icon-mundolib.svg
+apps/majoli-app/public/icon-majoli.svg
+apps/lili-app/public/icon-lili.svg
+```
+
+**Ventajas de SVG:**
+- Escalables sin pérdida de calidad
+- Tamaño de archivo pequeño (texto)
+- Compatibles con PWAs modernas
+
+#### 2. **Actualización de vite.config.js**
+
+Se actualizó el manifest de cada app con:
+
+**Mundo Lib:**
+```javascript
+manifest: {
+  name: 'Mundo Lib - Registro',
+  short_name: 'Mundo Lib',
+  theme_color: '#F59E0B',  // Amarillo
+  icons: [{ src: '/icon-mundolib.svg', ... }]
+}
+```
+
+**Majoli:**
+```javascript
+manifest: {
+  name: 'Majoli - Registro',
+  short_name: 'Majoli',
+  theme_color: '#10B981',  // Verde
+  icons: [{ src: '/icon-majoli.svg', ... }]
+}
+```
+
+**Lili:**
+```javascript
+manifest: {
+  name: 'Lili Cosméticos - Registro',
+  short_name: 'Lili',
+  theme_color: '#EC4899',  // Rosa
+  icons: [{ src: '/icon-lili.svg', ... }]
+}
+```
+
+#### 3. **Limpieza de Proyectos Duplicados**
+
+**Problema:** El proceso de deployment creó 2 proyectos para Mundo Lib:
+1. `catalogo-productos` (original, actualizado desde dashboard)
+2. `mundolib-app` (nuevo, creado con CLI)
+
+**Decisión:** Mantener `mundolib-app` por consistencia de nombres:
+- ✅ mundolib-app
+- ✅ majoli-app
+- ✅ lili-app
+
+**Acciones:**
+1. Configurar variables de entorno en `mundolib-app`
+2. Hacer redeploy con variables correctas
+3. Eliminar proyecto `catalogo-productos` duplicado
+
+### 📱 Resultado Final
+
+**URLs de Producción:**
+
+| Tienda | URL | Icono | Nombre PWA |
+|--------|-----|-------|------------|
+| Mundo Lib | https://mundolib-app.vercel.app | 🟡 Amarillo "M" | Mundo Lib |
+| Majoli | https://majoli-app.vercel.app | 🟢 Verde "M" | Majoli |
+| Lili | https://lili-app-ruddy.vercel.app | 🌸 Rosa "L" | Lili Cosméticos |
+
+**Instalación en móvil:**
+- Cada app tiene su propio icono de color en el home screen
+- Nombres diferenciados para fácil identificación
+- Colores de tema únicos al abrir la app
+
+### 📝 Archivos Modificados
+
+```
+apps/mundolib-app/vite.config.js
+apps/mundolib-app/public/icon-mundolib.svg
+apps/majoli-app/vite.config.js
+apps/majoli-app/public/icon-majoli.svg
+apps/lili-app/vite.config.js
+apps/lili-app/public/icon-lili.svg
+```
+
+**Commit:** `Agregar iconos SVG personalizados para cada tienda`
 
 ---
 
