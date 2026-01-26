@@ -792,6 +792,79 @@ app.post('/api/productos/lote', async (req, res) => {
   }
 });
 
+// Migrar stock de productos viejos (temporal - para arreglar productos guardados antes del fix)
+app.post('/api/productos/migrar-stock', async (req, res) => {
+  try {
+    console.log('🔧 Iniciando migración de stock...');
+
+    // Obtener todos los productos en proceso/completado con cantidad_ingresada pero sin stock por tienda
+    const { data: productos, error: fetchError } = await supabase
+      .from('productos')
+      .select('*')
+      .in('estado_registro', ['proceso', 'completado'])
+      .gt('cantidad_ingresada', 0);
+
+    if (fetchError) throw fetchError;
+
+    if (!productos || productos.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay productos para migrar',
+        migrados: 0
+      });
+    }
+
+    console.log(`📦 Encontrados ${productos.length} productos candidatos`);
+
+    let migrados = 0;
+
+    for (const producto of productos) {
+      const cantidad = producto.cantidad_ingresada;
+
+      // Solo migrar si todos los stocks están en 0
+      if (producto.stock_mundo_lib === 0 && producto.stock_majoli === 0 && producto.stock_lili === 0) {
+        // Determinar tienda por tienda_origen o asignar a mundo_lib por defecto
+        const tienda = producto.tienda_origen || 'mundo_lib';
+
+        const updates = {};
+        if (tienda === 'mundo_lib') {
+          updates.stock_mundo_lib = cantidad;
+        } else if (tienda === 'majoli') {
+          updates.stock_majoli = cantidad;
+        } else if (tienda === 'lili') {
+          updates.stock_lili = cantidad;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          const { error: updateError } = await supabase
+            .from('productos')
+            .update(updates)
+            .eq('id', producto.id);
+
+          if (!updateError) {
+            migrados++;
+            console.log(`  ✅ Producto ${producto.id} migrado: ${cantidad} → stock_${tienda}`);
+          } else {
+            console.error(`  ❌ Error migrando producto ${producto.id}:`, updateError);
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Migración completada: ${migrados} productos actualizados`);
+
+    res.json({
+      success: true,
+      message: `${migrados} productos migrados exitosamente`,
+      migrados,
+      total: productos.length
+    });
+  } catch (error) {
+    console.error('❌ Error en migración:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== ENDPOINTS FALTANTES ====================
 
 // 14. Crear reporte de faltante
