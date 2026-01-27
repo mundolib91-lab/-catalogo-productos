@@ -592,9 +592,15 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-26 (SESIÓN 7 - Deployment y Personalización Completados)
-**Rama actual al guardar:** master
+**Última actualización:** 2026-01-27 (SESIÓN 8 - Mejoras UX y Validaciones)
+**Rama actual al guardar:** dev
 **Cambios recientes:**
+- ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
+- ✅ Botones separados para cámara/galería en subida de imágenes (mejor compatibilidad Android)
+- ✅ Campo cantidad obligatorio en registro por lotes (previene productos sin stock)
+- ✅ Botón eliminar en productos existentes (dentro de modal Ver Detalles)
+- ✅ Cálculo de ganancia en tiempo real al editar precios en existentes
+- ✅ Todos los cambios aplicados a las 3 apps (mundolib, majoli, lili)
 - ✅ **SESIÓN 7:** Deployment completo de sistema multi-tienda a producción
 - ✅ Fix crítico: Variables de entorno Railway corregidas (SERVICE_ROLE_KEY tenía caracteres extra)
 - ✅ Backend development funcionando correctamente en Railway
@@ -608,6 +614,149 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
   - Lili: https://lili-app-ruddy.vercel.app
 - ✅ Todas las apps con variables de entorno configuradas
 - ✅ PWA funcional con iconos diferenciados en las 3 tiendas
+
+---
+
+## 🎨 MEJORAS UX Y VALIDACIONES (SESIÓN 8 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-27
+
+### 🎯 Objetivo
+Mejorar la experiencia de usuario y agregar validaciones faltantes en el sistema multi-tienda.
+
+### ✅ Mejoras Implementadas
+
+#### 1. **Botones Separados para Subida de Imágenes**
+
+**Problema:**
+- En dispositivos Android diferentes (Poco F3 vs Redmi 13) el comportamiento del input de imagen era inconsistente
+- Poco F3: Mostraba "Cámara" y "Examinar"
+- Redmi 13: Mostraba solo "Fotos" y "Colecciones" (sin opción de cámara)
+- Problema causado por implementaciones diferentes del atributo `capture` en fabricantes
+
+**Solución:**
+- Dos botones separados en lugar de uno solo:
+  - **📷 Tomar Foto**: Con `capture="environment"` (activa cámara trasera)
+  - **🖼️ Desde Galería**: Sin `capture` (abre galería de fotos)
+- Diseño responsive en grid de 2 columnas
+- Colores diferenciados (azul para cámara, verde para galería)
+- Botón "🗑️ Quitar Imagen" cuando hay previsualización
+
+**Componente actualizado:**
+- `apps/mundolib-app/src/components/SelectorImagen.jsx`
+- `apps/majoli-app/src/components/SelectorImagen.jsx`
+- `apps/lili-app/src/components/SelectorImagen.jsx`
+
+#### 2. **Campo Cantidad Obligatorio en Registro por Lotes**
+
+**Problema:**
+- Al agregar productos por lote, el campo cantidad no era obligatorio
+- Se podían guardar productos con cantidad = 0
+- Productos con stock 0 no aparecían en la pestaña "En Proceso" (filtrada por stock > 0)
+- Usuario confundido: "guardaba pero no veía los productos"
+
+**Solución:**
+- Campo cantidad ahora es **obligatorio** con validación:
+  - Asterisco rojo (*) en el label
+  - Validación: cantidad debe ser > 0
+  - Mensaje de error si no cumple: "La cantidad es obligatoria y debe ser mayor a 0"
+  - Borde rojo en input cuando hay error
+- Previene guardar productos sin stock definido
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/majoli-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/lili-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/mundolib-app/src/components/FormularioLoteMarca.jsx`
+- `apps/majoli-app/src/components/FormularioLoteMarca.jsx`
+- `apps/lili-app/src/components/FormularioLoteMarca.jsx`
+
+#### 3. **Botón Eliminar en Productos Existentes**
+
+**Problema:**
+- En la pestaña "Existente" no había forma de eliminar productos
+- Solo había opción de eliminar en "En Proceso"
+- Si un producto llegaba a Existentes, era difícil eliminarlo
+
+**Solución:**
+- Botón "🗑️ Eliminar" agregado dentro del modal "Ver Detalles"
+- No está en la vista principal (para evitar eliminaciones accidentales)
+- Requiere confirmación con diálogo nativo del navegador
+- Muestra estado de carga "⏳ Eliminando..."
+- Después de eliminar: cierra modal y recarga lista
+- Posicionado entre botones "Cerrar" y "Editar"
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/pages/VerEditarProducto.jsx`
+- `apps/majoli-app/src/pages/VerEditarProducto.jsx`
+- `apps/lili-app/src/pages/VerEditarProducto.jsx`
+
+#### 4. **Cálculo de Ganancia en Tiempo Real**
+
+**Problema:**
+- En "En Proceso", al editar precios se mostraba la ganancia al instante
+- En "Existente", la ganancia solo se mostraba con datos originales (no se actualizaba al editar)
+- Dificultaba verificar si los datos del producto eran correctos
+
+**Solución:**
+- Cálculo de ganancia ahora usa `formData` en lugar de `producto`
+- Se actualiza instantáneamente al modificar precio de compra o venta
+- Visual mejorado:
+  - Fondo verde + texto verde = Ganancia positiva
+  - Fondo rojo + texto rojo = Pérdida (venta menor que compra)
+  - Muestra monto absoluto (Bs X.XX) y porcentaje (XX.X%)
+  - Mensaje de alerta "⚠️ Estás vendiendo con pérdida" cuando aplica
+- Facilita validación de datos antes de guardar
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/pages/VerEditarProducto.jsx`
+- `apps/majoli-app/src/pages/VerEditarProducto.jsx`
+- `apps/lili-app/src/pages/VerEditarProducto.jsx`
+
+### 📝 Archivos Modificados
+
+**Componentes:**
+```
+apps/mundolib-app/src/components/SelectorImagen.jsx
+apps/majoli-app/src/components/SelectorImagen.jsx
+apps/lili-app/src/components/SelectorImagen.jsx
+
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/lili-app/src/components/FormularioLoteProveedor.jsx
+
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+apps/lili-app/src/components/FormularioLoteMarca.jsx
+
+apps/mundolib-app/src/pages/VerEditarProducto.jsx
+apps/majoli-app/src/pages/VerEditarProducto.jsx
+apps/lili-app/src/pages/VerEditarProducto.jsx
+```
+
+### 🚀 Commits Realizados
+
+1. `Separar botones de cámara y galería para mejor compatibilidad Android`
+2. `Hacer campo cantidad obligatorio en formularios de registro por lote`
+3. `Agregar botón eliminar y cálculo de ganancia en tiempo real en productos existentes`
+
+### 💡 Beneficios
+
+- ✅ **Compatibilidad Android mejorada**: Funciona consistente en todos los dispositivos
+- ✅ **Menos errores de usuario**: Validación previene productos sin stock
+- ✅ **Gestión completa en Existentes**: Eliminar productos desde cualquier pestaña
+- ✅ **Verificación de datos mejorada**: Ver ganancia/pérdida al instante al editar precios
+- ✅ **UX consistente**: Todas las funcionalidades disponibles en todas las pestañas
+
+### 📊 Impacto en Tokens
+
+**Nota importante sobre costos:**
+- Con el sistema multi-tienda (3 apps), cada cambio requiere modificar 3 archivos
+- Consumo aproximado: 3x tokens vs sistema de una sola app
+- **Refactorización planificada**: Migrar a librería compartida de componentes
+  - Reducirá consumo de tokens en ~66% para cambios futuros
+  - Se implementará antes de crear nuevas vistas (Inventario, Compras, etc.)
+  - Inversión inicial de ~800-1,200 tokens, break-even en 3-4 cambios
 
 ---
 
