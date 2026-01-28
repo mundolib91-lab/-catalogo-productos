@@ -416,8 +416,9 @@ app.get('/api/reportes/stock-bajo', async (req, res) => {
 app.get('/api/productos/estado/:estado', async (req, res) => {
   try {
     const { estado } = req.params; // proceso, completado, existente
-    const { page = 1, limit = 20, search = '', tienda = null } = req.query;
+    const { page = 1, limit = 20, search = '', tienda = null, incluir_sin_stock = 'false' } = req.query;
     const offset = (page - 1) * limit;
+    const incluirSinStock = incluir_sin_stock === 'true';
 
     let query = supabase
       .from('productos')
@@ -431,14 +432,20 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
       query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
     }
 
-    // Filtrar por tienda (productos con stock > 0 O productos que pertenecen a la tienda)
+    // Filtrar por tienda
     if (tienda) {
-      if (tienda === 'mundo_lib') {
-        query = query.or('stock_mundo_lib.gt.0,tienda_origen.eq.mundo_lib');
-      } else if (tienda === 'majoli') {
-        query = query.or('stock_majoli.gt.0,tienda_origen.eq.majoli');
-      } else if (tienda === 'lili') {
-        query = query.or('stock_lili.gt.0,tienda_origen.eq.lili');
+      if (incluirSinStock) {
+        // Para Registro: mostrar todos los productos de la tienda (con o sin stock)
+        query = query.eq('tienda_origen', tienda);
+      } else {
+        // Para Atención: solo productos con stock > 0
+        if (tienda === 'mundo_lib') {
+          query = query.gt('stock_mundo_lib', 0);
+        } else if (tienda === 'majoli') {
+          query = query.gt('stock_majoli', 0);
+        } else if (tienda === 'lili') {
+          query = query.gt('stock_lili', 0);
+        }
       }
     }
 
