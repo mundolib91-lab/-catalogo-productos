@@ -530,20 +530,12 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     // Combinar datos actuales con updates para validación
     const productoFinal = { ...productoActual, ...updates };
 
-    // Validar que tenga TODOS los datos mínimos requeridos
-    // Para stock, verificar que al menos una tienda tenga stock > 0
-    const tieneStock = (
-      (productoFinal.stock_mundo_lib != null && productoFinal.stock_mundo_lib > 0) ||
-      (productoFinal.stock_majoli != null && productoFinal.stock_majoli > 0) ||
-      (productoFinal.stock_lili != null && productoFinal.stock_lili > 0)
-    );
-
+    // Validar que tenga los datos mínimos requeridos para completar
+    // Solo requerimos: descripción y ambos precios
     const validaciones = {
-      imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
-      precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
-      precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0,
       descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
-      stock: tieneStock
+      precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
+      precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0
     };
 
     // Verificar si falta algún campo
