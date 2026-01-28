@@ -375,6 +375,41 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                     </div>
                   </div>
 
+                  {/* Cálculo en tiempo real de ganancia */}
+                  {productoActual.precio_compra && productoActual.precio_venta && (() => {
+                    const precioCompra = parseFloat(productoActual.precio_compra) || 0;
+                    const precioVenta = parseFloat(productoActual.precio_venta) || 0;
+                    const ganancia = precioVenta - precioCompra;
+                    const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+                    const esGanancia = ganancia >= 0;
+
+                    return (
+                      <div className={`p-4 rounded-lg border-2 ${
+                        esGanancia ? 'bg-green-50 dark:bg-green-900/20 border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-400'
+                      }`}>
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Ganancia por unidad</p>
+                            <p className={`text-xl font-bold ${esGanancia ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Porcentaje</p>
+                            <p className={`text-xl font-bold ${esGanancia ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        {!esGanancia && (
+                          <p className="text-center text-sm text-red-600 dark:text-red-400 mt-2 font-semibold">
+                            ⚠️ Estás vendiendo con pérdida
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <button
                     type="button"
                     onClick={agregarProductoALote}
