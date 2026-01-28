@@ -365,20 +365,6 @@ function FormularioLoteProveedor({ isOpen, onClose, onSubmitLote }) {
                     />
                   </div>
 
-                  {/* Marca */}
-                  <div>
-                    <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
-                      Marca
-                    </label>
-                    <input
-                      type="text"
-                      value={productoActual.marca}
-                      onChange={(e) => setProductoActual({ ...productoActual, marca: e.target.value })}
-                      className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 dark:text-white"
-                      placeholder="Ej: Faber-Castell, Pilot..."
-                    />
-                  </div>
-
                   {/* Descripción */}
                   <div>
                     <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">

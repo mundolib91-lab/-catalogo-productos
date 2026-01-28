@@ -572,20 +572,38 @@ app.put('/api/productos/:id/completar', async (req, res) => {
   }
 });
 
-// 10. Crear producto con datos mínimos (para "en proceso")
+// 10. Crear producto con datos mínimos (para "en proceso" o "completado")
 app.post('/api/productos/rapido', async (req, res) => {
   try {
-    // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock
+    // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock y precios
     // Esto evita cualquier problema con DEFAULT en el INSERT
+
+    // Determinar estado según si tiene precios completos
+    const tienePreciosCompletos =
+      req.body.precio_compra_unidad !== undefined &&
+      req.body.precio_compra_unidad !== null &&
+      req.body.precio_venta_unidad !== undefined &&
+      req.body.precio_venta_unidad !== null;
+
+    const estadoInicial = tienePreciosCompletos ? 'completado' : 'proceso';
 
     // 1. Insertar producto base SIN stock
     const productoBase = {
       nombre: req.body.descripcion,
       descripcion: req.body.descripcion,
       imagen: req.body.imagen || '',
-      estado_registro: 'proceso',
+      estado_registro: estadoInicial,
       fecha_ingreso: new Date().toISOString()
     };
+
+    // Si tiene precios, agregarlos al insert
+    if (tienePreciosCompletos) {
+      productoBase.precio_compra_unidad = parseFloat(req.body.precio_compra_unidad);
+      productoBase.precio_venta_unidad = parseFloat(req.body.precio_venta_unidad);
+      productoBase.fecha_completado = new Date().toISOString();
+      productoBase.fecha_modif_precio_compra = new Date().toISOString();
+      productoBase.fecha_modif_precio_venta = new Date().toISOString();
+    }
 
     const { data: newProducto, error: insertError } = await supabase
       .from('productos')
@@ -726,17 +744,30 @@ app.post('/api/productos/lote', async (req, res) => {
     // Preparar productos para insertar
     const productosParaInsertar = productos.map((producto, index) => {
       const cantidad = parseInt(producto.cantidad) || 0;
+      const precioCompra = parseFloat(producto.precio_compra) || 0;
+      const precioVenta = producto.precio_venta ? parseFloat(producto.precio_venta) : null;
+
+      // Determinar estado según si tiene precios completos
+      const tienePreciosCompletos = precioCompra > 0 && precioVenta !== null && precioVenta > 0;
+      const estadoInicial = tienePreciosCompletos ? 'completado' : 'proceso';
 
       const productoBase = {
         imagen: producto.imagen || '',
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
         cantidad_ingresada: cantidad,
-        precio_compra_unidad: parseFloat(producto.precio_compra) || 0,
-        precio_venta_unidad: producto.precio_venta ? parseFloat(producto.precio_venta) : null,
-        estado_registro: 'proceso',
+        precio_compra_unidad: precioCompra,
+        precio_venta_unidad: precioVenta,
+        estado_registro: estadoInicial,
         created_at: new Date().toISOString()
       };
+
+      // Si está completado, agregar fechas
+      if (estadoInicial === 'completado') {
+        productoBase.fecha_completado = new Date().toISOString();
+        productoBase.fecha_modif_precio_compra = new Date().toISOString();
+        productoBase.fecha_modif_precio_venta = new Date().toISOString();
+      }
 
       // Asignar stock al campo específico de la tienda
       if (tienda === 'mundo_lib') {

@@ -709,7 +709,9 @@ function FormularioRapido({ onCerrar, onGuardar }) {
   const [formData, setFormData] = useState({
     descripcion: '',
     cantidad_ingresada: '',
-    imagen: ''
+    imagen: '',
+    precio_compra_unidad: '',
+    precio_venta_unidad: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -725,8 +727,20 @@ function FormularioRapido({ onCerrar, onGuardar }) {
         [APP_CONFIG.campo_stock]: parseInt(formData.cantidad_ingresada)
       };
 
+      // Agregar precios si fueron ingresados
+      if (formData.precio_compra_unidad) {
+        dataToSend.precio_compra_unidad = parseFloat(formData.precio_compra_unidad);
+      }
+      if (formData.precio_venta_unidad) {
+        dataToSend.precio_venta_unidad = parseFloat(formData.precio_venta_unidad);
+      }
+
       await createProductoRapido(dataToSend);
-      success('Producto registrado en proceso');
+
+      // Mensaje según si tiene precios o no
+      const tienePrecio = formData.precio_compra_unidad && formData.precio_venta_unidad;
+      const mensaje = tienePrecio ? 'Producto registrado como completado' : 'Producto registrado en proceso';
+      success(mensaje);
       setTimeout(() => onGuardar(), 1500);
     } catch (error) {
       mostrarError('Error al registrar producto');
@@ -772,7 +786,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-lg font-bold mb-2">Cantidad Ingresada *</label>
             <input
               type="number"
@@ -784,12 +798,36 @@ function FormularioRapido({ onCerrar, onGuardar }) {
             />
           </div>
 
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Precio de Compra (Bs)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.precio_compra_unidad}
+              onChange={(e) => setFormData({ ...formData, precio_compra_unidad: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              placeholder="2.50"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-lg font-bold mb-2">Precio de Venta (Bs)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.precio_venta_unidad}
+              onChange={(e) => setFormData({ ...formData, precio_venta_unidad: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              placeholder="5.00"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-amber-500 text-white py-4 rounded-lg font-bold text-2xl hover:bg-amber-600 disabled:bg-gray-400"
           >
-            {loading ? '⏳ Guardando...' : '💾 Guardar en Proceso'}
+            {loading ? '⏳ Guardando...' : '💾 Guardar Producto'}
           </button>
         </form>
       </div>
