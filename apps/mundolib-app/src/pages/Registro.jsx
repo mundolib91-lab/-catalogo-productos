@@ -47,8 +47,9 @@ function Registro({ menuHamburguesa }) {
     setLoading(true);
     try {
       const response = await getProductosPorEstado(pestanaActiva, {
-        search: busqueda,
-        tienda: APP_CONFIG.tienda
+        search: busqueda
+        // No filtrar por tienda en la página de Registro
+        // para mostrar todos los productos, incluso sin stock
       });
 
       let productosData = response.data || [];
