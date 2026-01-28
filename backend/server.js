@@ -531,8 +531,9 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     const productoFinal = { ...productoActual, ...updates };
 
     // Validar que tenga los datos mínimos requeridos para completar
-    // Solo requerimos: descripción y ambos precios
+    // Requerimos: imagen, descripción y ambos precios (cantidad NO requerida)
     const validaciones = {
+      imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
       descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
       precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
       precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0
@@ -584,14 +585,19 @@ app.post('/api/productos/rapido', async (req, res) => {
     // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock y precios
     // Esto evita cualquier problema con DEFAULT en el INSERT
 
-    // Determinar estado según si tiene precios completos
-    const tienePreciosCompletos =
-      req.body.precio_compra_unidad !== undefined &&
-      req.body.precio_compra_unidad !== null &&
-      req.body.precio_venta_unidad !== undefined &&
-      req.body.precio_venta_unidad !== null;
+    // Determinar estado según si tiene datos completos para Atención al Cliente
+    // Requiere: imagen, descripción y ambos precios (cantidad NO requerida)
+    const tieneImagen = req.body.imagen && req.body.imagen.trim() !== '';
+    const tieneDescripcion = req.body.descripcion && req.body.descripcion.trim() !== '';
+    const tienePrecioCompra = req.body.precio_compra_unidad !== undefined &&
+                              req.body.precio_compra_unidad !== null &&
+                              parseFloat(req.body.precio_compra_unidad) > 0;
+    const tienePrecioVenta = req.body.precio_venta_unidad !== undefined &&
+                             req.body.precio_venta_unidad !== null &&
+                             parseFloat(req.body.precio_venta_unidad) > 0;
 
-    const estadoInicial = tienePreciosCompletos ? 'completado' : 'proceso';
+    const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+    const estadoInicial = estaCompleto ? 'completado' : 'proceso';
 
     // 1. Insertar producto base SIN stock
     const productoBase = {
@@ -603,13 +609,21 @@ app.post('/api/productos/rapido', async (req, res) => {
       fecha_ingreso: new Date().toISOString()
     };
 
-    // Si tiene precios, agregarlos al insert
-    if (tienePreciosCompletos) {
+    // Si está completo, agregar precios y fechas
+    if (estaCompleto) {
       productoBase.precio_compra_unidad = parseFloat(req.body.precio_compra_unidad);
       productoBase.precio_venta_unidad = parseFloat(req.body.precio_venta_unidad);
       productoBase.fecha_completado = new Date().toISOString();
       productoBase.fecha_modif_precio_compra = new Date().toISOString();
       productoBase.fecha_modif_precio_venta = new Date().toISOString();
+    } else if (tienePrecioCompra || tienePrecioVenta) {
+      // Si tiene precios pero no está completo, guardarlos igual
+      if (tienePrecioCompra) {
+        productoBase.precio_compra_unidad = parseFloat(req.body.precio_compra_unidad);
+      }
+      if (tienePrecioVenta) {
+        productoBase.precio_venta_unidad = parseFloat(req.body.precio_venta_unidad);
+      }
     }
 
     const { data: newProducto, error: insertError } = await supabase
@@ -754,9 +768,15 @@ app.post('/api/productos/lote', async (req, res) => {
       const precioCompra = parseFloat(producto.precio_compra) || 0;
       const precioVenta = producto.precio_venta ? parseFloat(producto.precio_venta) : null;
 
-      // Determinar estado según si tiene precios completos
-      const tienePreciosCompletos = precioCompra > 0 && precioVenta !== null && precioVenta > 0;
-      const estadoInicial = tienePreciosCompletos ? 'completado' : 'proceso';
+      // Determinar estado según si tiene datos completos para Atención al Cliente
+      // Requiere: imagen, descripción y ambos precios (cantidad NO requerida)
+      const tieneImagen = producto.imagen && producto.imagen.trim() !== '';
+      const tieneDescripcion = producto.descripcion && producto.descripcion.trim() !== '';
+      const tienePrecioCompra = precioCompra > 0;
+      const tienePrecioVenta = precioVenta !== null && precioVenta > 0;
+
+      const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+      const estadoInicial = estaCompleto ? 'completado' : 'proceso';
 
       const productoBase = {
         imagen: producto.imagen || '',
