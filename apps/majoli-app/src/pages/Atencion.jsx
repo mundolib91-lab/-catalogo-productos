@@ -40,9 +40,10 @@ function Atencion({ menuHamburguesa }) {
     setLoading(true);
     try {
       // Traer productos existentes Y completados en paralelo
+      // incluir_sin_stock=true para mostrar productos aunque no tengan cantidad
       const [responseExistente, responseCompletado] = await Promise.all([
-        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda }),
-        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda })
+        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' }),
+        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' })
       ]);
 
       // Combinar ambos arrays
@@ -51,17 +52,15 @@ function Atencion({ menuHamburguesa }) {
         ...(responseCompletado.data || [])
       ];
 
-      // Filtrar productos que tengan los datos mínimos necesarios para vender
+      // Filtrar productos que tengan los datos mínimos necesarios para atención
+      // Stock NO es obligatorio, puede ser 0
       productosData = productosData.filter(p => {
         const tieneImagen = p.imagen && p.imagen.trim() !== '';
         const tienePrecioVenta = p.precio_venta_unidad != null && p.precio_venta_unidad > 0;
         const tienePrecioCompra = p.precio_compra_unidad != null && p.precio_compra_unidad > 0;
         const tieneDescripcion = p.descripcion && p.descripcion.trim() !== '';
-        // Usar stock de la tienda actual
-        const stockTienda = p[APP_CONFIG.campo_stock];
-        const tieneStock = stockTienda != null && stockTienda > 0;
 
-        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion && tieneStock;
+        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion;
       });
 
       // Filtrar solo faltantes si está activado
