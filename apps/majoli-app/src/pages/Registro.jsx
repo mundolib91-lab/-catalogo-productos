@@ -47,9 +47,8 @@ function Registro({ menuHamburguesa }) {
     setLoading(true);
     try {
       const response = await getProductosPorEstado(pestanaActiva, {
-        search: busqueda
-        // No filtrar por tienda en la página de Registro
-        // para mostrar todos los productos, incluso sin stock
+        search: busqueda,
+        tienda: APP_CONFIG.tienda
       });
 
       let productosData = response.data || [];
@@ -725,6 +724,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
       const dataToSend = {
         descripcion: formData.descripcion,
         imagen: formData.imagen,
+        tienda_origen: APP_CONFIG.tienda,
         [APP_CONFIG.campo_stock]: formData.cantidad_ingresada ? parseInt(formData.cantidad_ingresada) : 0
       };
 

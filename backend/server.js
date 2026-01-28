@@ -431,14 +431,14 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
       query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
     }
 
-    // Filtrar por tienda (solo productos con stock > 0 en esa tienda)
+    // Filtrar por tienda (productos con stock > 0 O productos que pertenecen a la tienda)
     if (tienda) {
       if (tienda === 'mundo_lib') {
-        query = query.gt('stock_mundo_lib', 0);
+        query = query.or('stock_mundo_lib.gt.0,tienda_origen.eq.mundo_lib');
       } else if (tienda === 'majoli') {
-        query = query.gt('stock_majoli', 0);
+        query = query.or('stock_majoli.gt.0,tienda_origen.eq.majoli');
       } else if (tienda === 'lili') {
-        query = query.gt('stock_lili', 0);
+        query = query.or('stock_lili.gt.0,tienda_origen.eq.lili');
       }
     }
 
@@ -592,6 +592,7 @@ app.post('/api/productos/rapido', async (req, res) => {
       nombre: req.body.descripcion,
       descripcion: req.body.descripcion,
       imagen: req.body.imagen || '',
+      tienda_origen: req.body.tienda_origen || null,
       estado_registro: estadoInicial,
       fecha_ingreso: new Date().toISOString()
     };
@@ -755,6 +756,7 @@ app.post('/api/productos/lote', async (req, res) => {
         imagen: producto.imagen || '',
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
+        tienda_origen: tienda || null,
         cantidad_ingresada: cantidad,
         precio_compra_unidad: precioCompra,
         precio_venta_unidad: precioVenta,
