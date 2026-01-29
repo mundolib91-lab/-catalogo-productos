@@ -79,24 +79,41 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
     setGuardando(true);
 
     try {
-      // Convertir números y preparar datos
-      const dataToSend = {
-        ...formData,
-        precio_compra_unidad: parseFloat(formData.precio_compra_unidad),
-        precio_venta_unidad: parseFloat(formData.precio_venta_unidad),
-        // Enviar stock con el nombre de campo correcto para la tienda
-        [APP_CONFIG.campo_stock]: parseInt(formData.cantidad_ingresada)
-      };
+      // Preparar datos - solo enviar campos que tienen valores
+      const dataToSend = { ...formData };
+
+      // Convertir precios solo si tienen valor
+      if (formData.precio_compra_unidad && formData.precio_compra_unidad !== '') {
+        dataToSend.precio_compra_unidad = parseFloat(formData.precio_compra_unidad);
+      } else {
+        delete dataToSend.precio_compra_unidad;
+      }
+
+      if (formData.precio_venta_unidad && formData.precio_venta_unidad !== '') {
+        dataToSend.precio_venta_unidad = parseFloat(formData.precio_venta_unidad);
+      } else {
+        delete dataToSend.precio_venta_unidad;
+      }
+
+      // Convertir stock solo si tiene valor
+      if (formData.cantidad_ingresada && formData.cantidad_ingresada !== '') {
+        dataToSend[APP_CONFIG.campo_stock] = parseInt(formData.cantidad_ingresada);
+      }
 
       // Eliminar cantidad_ingresada del objeto (usamos el campo específico de tienda)
       delete dataToSend.cantidad_ingresada;
 
-      await completarProducto(productoId, dataToSend);
+      const response = await completarProducto(productoId, dataToSend);
 
-      success('Producto completado exitosamente');
+      // Mostrar mensaje apropiado según el resultado
+      if (response.data.estado_registro === 'completado') {
+        success('Producto completado exitosamente');
+      } else {
+        success('Datos guardados. Completa todos los campos requeridos para marcar como completado');
+      }
       setTimeout(() => onGuardar(), 1500);
     } catch (error) {
-      mostrarError('Error al completar el producto');
+      mostrarError('Error al guardar el producto');
     } finally {
       setGuardando(false);
     }
@@ -179,14 +196,17 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
             </div>
           </div>
 
-          {/* Datos OBLIGATORIOS a completar */}
-          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-6">
-            <h3 className="font-bold text-red-800 mb-3">⚠️ Datos OBLIGATORIOS</h3>
+          {/* Datos para completar */}
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-6">
+            <h3 className="font-bold text-amber-800 mb-2">💰 Precios</h3>
+            <p className="text-sm text-amber-700 mb-3">
+              Completa imagen + descripción + ambos precios para marcar como completado
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-lg font-medium text-gray-700 mb-1">
-                  Precio de Compra (Bs) *
+                  Precio de Compra (Bs)
                 </label>
                 <input
                   type="number"
@@ -194,15 +214,14 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
                   name="precio_compra_unidad"
                   value={formData.precio_compra_unidad}
                   onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-3 border-2 border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                   placeholder="2.50"
                 />
               </div>
 
               <div>
                 <label className="block text-lg font-medium text-gray-700 mb-1">
-                  Precio de Venta (Bs) *
+                  Precio de Venta (Bs)
                 </label>
                 <input
                   type="number"
@@ -210,8 +229,7 @@ function FormularioCompleto({ productoId, onCerrar, onGuardar }) {
                   name="precio_venta_unidad"
                   value={formData.precio_venta_unidad}
                   onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-3 border-2 border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500"
                   placeholder="4.00"
                 />
               </div>

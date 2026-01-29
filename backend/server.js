@@ -518,7 +518,7 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    // Obtener producto actual para validar con datos actualizados
+    // Obtener producto actual
     const { data: productoActual, error: errorGet } = await supabase
       .from('productos')
       .select('*')
@@ -527,36 +527,7 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 
     if (errorGet) throw errorGet;
 
-    // Combinar datos actuales con updates para validación
-    const productoFinal = { ...productoActual, ...updates };
-
-    // Validar que tenga los datos mínimos requeridos para completar
-    // Requerimos: imagen, descripción y ambos precios (cantidad NO requerida)
-    const validaciones = {
-      imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
-      descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
-      precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
-      precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0
-    };
-
-    // Verificar si falta algún campo
-    const camposFaltantes = Object.entries(validaciones)
-      .filter(([campo, valido]) => !valido)
-      .map(([campo]) => campo);
-
-    if (camposFaltantes.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Faltan datos requeridos para completar: ${camposFaltantes.join(', ')}`,
-        camposFaltantes
-      });
-    }
-
-    // Marcar como completado
-    updates.estado_registro = 'completado';
-    updates.fecha_completado = new Date().toISOString();
-
-    // Actualizar fechas de modificación de precios
+    // Actualizar fechas de modificación de precios si se modifican
     if (updates.precio_compra_unidad !== undefined) {
       updates.fecha_modif_precio_compra = new Date().toISOString();
     }
@@ -564,6 +535,27 @@ app.put('/api/productos/:id/completar', async (req, res) => {
       updates.fecha_modif_precio_venta = new Date().toISOString();
     }
 
+    // Combinar datos actuales con updates para determinar el estado final
+    const productoFinal = { ...productoActual, ...updates };
+
+    // Verificar si tiene TODOS los datos necesarios para estar completado
+    const tieneImagen = productoFinal.imagen && productoFinal.imagen.trim() !== '';
+    const tieneDescripcion = productoFinal.descripcion && productoFinal.descripcion.trim() !== '';
+    const tienePrecioCompra = productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0;
+    const tienePrecioVenta = productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0;
+
+    const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+
+    // Determinar estado según si está completo o no
+    if (estaCompleto) {
+      updates.estado_registro = 'completado';
+      updates.fecha_completado = new Date().toISOString();
+    } else {
+      // Si no está completo, asegurar que se mantiene en proceso
+      updates.estado_registro = 'proceso';
+    }
+
+    // Actualizar producto (siempre guarda los cambios, sin importar si está completo)
     const { data, error } = await supabase
       .from('productos')
       .update(updates)
@@ -573,7 +565,13 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 
     if (error) throw error;
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+      mensaje: estaCompleto
+        ? 'Producto completado exitosamente'
+        : 'Datos guardados. Completa imagen, descripción y ambos precios para marcar como completado'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
