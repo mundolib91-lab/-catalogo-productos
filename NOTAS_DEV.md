@@ -592,7 +592,277 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-27 (SESIÓN 8 - Mejoras UX y Validaciones)
+## 💰 SISTEMA DE REGISTRO FLEXIBLE CON PRECIOS (SESIÓN 9 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-28
+
+### 🎯 Objetivo
+Rediseñar el sistema de registro para soportar datos parciales y automatizar transiciones de estado basándose en la completitud de información, con enfoque en flexibilidad del flujo de trabajo real.
+
+### 📋 Contexto del Problema
+
+El sistema original requería que todos los datos fueran completados de una vez, pero el flujo de trabajo real es más flexible:
+- A veces solo tienen descripción
+- A veces tienen descripción + foto
+- A veces tienen descripción + foto + cantidad
+- A veces tienen descripción + precios + cantidad
+- El precio de venta es más importante que el precio de compra (se puede estimar del mercado)
+- La cantidad no siempre se ingresa al momento del registro
+
+### ✅ Cambios Implementados
+
+#### 1. **Campos de Precio en Formularios de Registro**
+
+**Agregados a todos los formularios:**
+- Precio de compra (precio_compra_unidad)
+- Precio de venta (precio_venta_unidad)
+- Cálculo de ganancia en tiempo real (monto + porcentaje)
+- Indicador visual de pérdida si venta < compra
+
+**Formularios modificados:**
+- FormularioRapido (registro individual)
+- FormularioLoteProveedor (registro por proveedor)
+- FormularioLoteMarca (registro por marca)
+
+**Componentes:**
+```
+apps/mundolib-app/src/pages/Registro.jsx
+apps/majoli-app/src/pages/Registro.jsx
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+```
+
+#### 2. **Simplificación de Formularios por Lote**
+
+**Eliminados campos redundantes:**
+- ❌ Campo "marca" en FormularioLoteProveedor (todos comparten proveedor)
+- ❌ Campo "proveedor" en FormularioLoteMarca (todos comparten marca)
+
+**Beneficio:** Menos campos = registro más rápido
+
+#### 3. **Validación Simplificada**
+
+**Solo DESCRIPCIÓN es obligatoria:**
+- ✅ Descripción - siempre requerida
+- ❌ Cantidad - opcional (puede ser 0 o vacía)
+- ❌ Imagen - opcional
+- ❌ Precios - opcionales (se pueden agregar después)
+
+#### 4. **Lógica de Estado Automático**
+
+**Reglas para pasar a "Completado":**
+- ✅ Tiene imagen
+- ✅ Tiene descripción
+- ✅ Tiene precio de compra > 0
+- ✅ Tiene precio de venta > 0
+- ❌ Cantidad NO es requerida
+
+**Si falta alguno de estos → queda en "Proceso"**
+
+**Backend actualizado:**
+```javascript
+// Endpoints modificados:
+POST /api/productos/rapido
+POST /api/productos/lote
+PUT /api/productos/:id/completar
+```
+
+#### 5. **Actualización Parcial de Productos**
+
+**Problema original:**
+- Endpoint /completar rechazaba si faltaban datos
+- No se podía guardar solo precio de compra o solo precio de venta
+- Bloqueaba el flujo de trabajo incremental
+
+**Solución implementada:**
+- Endpoint acepta datos parciales
+- Guarda cualquier campo proporcionado
+- Verifica completitud y cambia estado solo si tiene TODO
+- Mensaje adaptativo según resultado
+
+**Ejemplo de flujo:**
+1. Registro inicial: solo descripción → "Proceso"
+2. Primera actualización: agregar foto → guarda, sigue en "Proceso"
+3. Segunda actualización: agregar precio venta → guarda, sigue en "Proceso"
+4. Tercera actualización: agregar precio compra → guarda, **pasa a "Completado"**
+
+#### 6. **Filtro por Tienda con Productos Sin Stock**
+
+**Problema identificado:**
+- Productos sin cantidad no aparecían en ninguna tienda
+- Filtro solo mostraba productos con stock > 0
+- Productos de Majoli aparecían en Mundo Lib y viceversa
+
+**Solución Fase 1: Campo tienda_origen**
+```sql
+-- Backend ahora guarda tienda de origen en todos los endpoints
+tienda_origen: 'mundo_lib' | 'majoli' | 'lili'
+```
+
+**Solución Fase 2: Parámetro incluir_sin_stock**
+```javascript
+// Endpoint: GET /api/productos/estado/:estado
+// Nuevo parámetro: incluir_sin_stock=true/false
+
+if (incluir_sin_stock === 'true') {
+  // Página Registro: mostrar productos de la tienda (con o sin stock)
+  query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
+} else {
+  // Página Atención: solo productos con stock > 0
+  query = query.gt('stock_mundo_lib', 0);
+}
+```
+
+**Beneficios:**
+- ✅ Productos sin stock visibles en página Registro
+- ✅ Cada tienda ve solo sus productos
+- ✅ Página Atención sigue filtrando por disponibilidad
+- ✅ Backwards compatible con productos viejos
+
+#### 7. **Atención al Cliente Sin Filtro de Stock**
+
+**Cambio importante:**
+- Antes: Solo mostraba productos con stock > 0
+- Ahora: Muestra productos con imagen + descripción + precios (stock puede ser 0)
+
+**Razón:**
+- Permite mostrar productos en catálogo aunque no haya stock
+- Usuario de atención puede informar al cliente
+- Se puede tomar pedido anticipado
+
+**Archivos modificados:**
+```
+apps/mundolib-app/src/pages/Atencion.jsx
+apps/majoli-app/src/pages/Atencion.jsx
+```
+
+#### 8. **Cálculo de Ganancia en Tiempo Real**
+
+**Ubicaciones implementadas:**
+- FormularioRapido (registro individual)
+- FormularioLoteProveedor (registro por proveedor)
+- FormularioLoteMarca (registro por marca)
+
+**Características:**
+- Cálculo instantáneo al escribir precios
+- Muestra ganancia absoluta (Bs) y relativa (%)
+- Color verde = ganancia positiva
+- Color rojo = pérdida (precio venta < precio compra)
+- Alerta visual: "⚠️ Estás vendiendo con pérdida"
+- Compatible con dark mode
+
+**Ejemplo visual:**
+```
+┌─────────────────────────────────────────┐
+│  Ganancia por unidad    Porcentaje      │
+│     + Bs 1.50              60.0%        │
+└─────────────────────────────────────────┘
+    ✅ Verde = Ganancia
+
+┌─────────────────────────────────────────┐
+│  Ganancia por unidad    Porcentaje      │
+│     - Bs 0.50              -20.0%       │
+│  ⚠️ Estás vendiendo con pérdida         │
+└─────────────────────────────────────────┘
+    🔴 Rojo = Pérdida
+```
+
+### 📝 Archivos Modificados
+
+**Backend:**
+```
+backend/server.js
+- Endpoint POST /api/productos/rapido
+- Endpoint POST /api/productos/lote
+- Endpoint PUT /api/productos/:id/completar
+- Endpoint GET /api/productos/estado/:estado
+```
+
+**Frontend - Mundo Lib:**
+```
+apps/mundolib-app/src/pages/Registro.jsx
+apps/mundolib-app/src/pages/Atencion.jsx
+apps/mundolib-app/src/pages/FormularioCompleto.jsx
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+```
+
+**Frontend - Majoli:**
+```
+apps/majoli-app/src/pages/Registro.jsx
+apps/majoli-app/src/pages/Atencion.jsx
+apps/majoli-app/src/pages/FormularioCompleto.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+```
+
+### 🚀 Commits Realizados
+
+1. `Agregar campos de precio y cálculo de ganancia en formularios de registro`
+2. `Remover filtro de stock en página Registro`
+3. `Implementar filtro por tienda_origen para productos sin stock`
+4. `Agregar parámetro incluir_sin_stock para filtro flexible por tienda`
+5. `Corregir filtro de tienda para incluir productos con stock`
+6. `Actualizar validaciones de completar producto`
+7. `Permitir productos sin stock en Atención al Cliente`
+8. `Actualizar lógica de estado automático: requiere imagen`
+9. `Permitir actualización parcial de productos en proceso`
+
+### 💡 Beneficios
+
+- ✅ **Flujo de trabajo flexible**: Registrar con datos parciales y completar después
+- ✅ **Estado automático**: Producto pasa a completado cuando tiene todo necesario
+- ✅ **Cálculo de ganancia**: Ver rentabilidad antes de guardar
+- ✅ **Menos errores**: Solo descripción obligatoria reduce fricción
+- ✅ **Mejor aislamiento**: Cada tienda ve solo sus productos
+- ✅ **Backwards compatible**: Funciona con productos existentes sin tienda_origen
+- ✅ **Versatilidad**: Atención puede mostrar productos sin stock (para pedidos)
+
+### 🔍 Reglas de Negocio Finales
+
+**Para REGISTRO de producto:**
+- Obligatorio: Descripción
+- Opcional: Todo lo demás
+
+**Para pasar a COMPLETADO automáticamente:**
+- ✅ Imagen
+- ✅ Descripción
+- ✅ Precio de compra
+- ✅ Precio de venta
+- ❌ Cantidad (NO requerida)
+
+**Para aparecer en ATENCIÓN AL CLIENTE:**
+- ✅ Imagen
+- ✅ Descripción
+- ✅ Precio de compra
+- ✅ Precio de venta
+- ❌ Stock > 0 (NO requerido, puede ser 0)
+
+**Filtrado por tienda:**
+- Registro: Muestra productos con `tienda_origen = tienda` O `stock > 0 en tienda`
+- Atención: Muestra productos con `tienda_origen = tienda` O `stock > 0 en tienda`
+
+### 📊 Impacto en Flujo de Trabajo
+
+**Antes:**
+1. Registrar producto con TODOS los datos
+2. Si falta algo → error o no se guarda
+3. Difícil completar información después
+
+**Ahora:**
+1. Registrar con descripción solamente → Proceso
+2. Agregar foto cuando la tengan → Proceso
+3. Agregar precio venta (más común) → Proceso
+4. Agregar precio compra → **Completado automático** ✨
+5. Agregar cantidad cuando llegue el producto (opcional)
+
+**Resultado:** Flujo incremental que se ajusta a la realidad del negocio.
+
+---
+
+**Última actualización:** 2026-01-28 (SESIÓN 9 - Sistema de Registro Flexible con Precios)
 **Rama actual al guardar:** dev
 **Cambios recientes:**
 - ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
