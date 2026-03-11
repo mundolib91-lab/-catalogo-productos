@@ -76,7 +76,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
       const json = await res.json();
       if (json.success) {
         setVariantes(prev => [...prev, json.data]);
-        setFormVariante({ tipo: 'medida', valor: '', precio_compra: '', precio_venta: '' });
+        setFormVariante(prev => ({ tipo: prev.tipo, valor: '', precio_compra: '', precio_venta: '' }));
         setAgregandoVariante(false);
       } else {
         alert('Error: ' + json.error);
@@ -616,7 +616,12 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-purple-800">Variantes ({variantes.length})</h3>
             <button
-              onClick={() => { setAgregandoVariante(true); setVarianteEditando(null); }}
+              onClick={() => {
+                const tipoExistente = variantes.length > 0 ? variantes[0].tipo : 'medida';
+                setFormVariante(prev => ({ ...prev, tipo: tipoExistente, valor: '', precio_compra: '', precio_venta: '' }));
+                setAgregandoVariante(true);
+                setVarianteEditando(null);
+              }}
               className="px-3 py-1 bg-purple-600 text-white rounded-lg text-base font-semibold hover:bg-purple-700"
             >
               + Agregar
@@ -718,6 +723,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
                   type="text"
                   value={formVariante.valor}
                   onChange={e => setFormVariante(prev => ({ ...prev, valor: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && formVariante.valor.trim() && guardarNuevaVariante()}
                   placeholder="Ej: A4, Rojo, Grande..."
                   className="border border-gray-300 rounded-lg px-3 py-2 text-base"
                   autoFocus
@@ -743,7 +749,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
               </div>
               <p className="text-xs text-gray-500">Si no ingresas precio, se usa el precio del producto padre.</p>
               <div className="flex gap-2">
-                <button onClick={() => setAgregandoVariante(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 text-base">Cancelar</button>
+                <button onClick={() => { setAgregandoVariante(false); }} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 text-base">Cancelar</button>
                 <button onClick={guardarNuevaVariante} disabled={guardandoVariante || !formVariante.valor.trim()} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-base font-semibold disabled:opacity-50">
                   {guardandoVariante ? 'Guardando...' : 'Agregar'}
                 </button>
