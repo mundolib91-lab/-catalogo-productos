@@ -48,7 +48,8 @@ function Registro({ menuHamburguesa }) {
     try {
       const response = await getProductosPorEstado(pestanaActiva, {
         search: busqueda,
-        tienda: APP_CONFIG.tienda
+        tienda: APP_CONFIG.tienda,
+        incluir_sin_stock: 'true' // Mostrar productos sin stock en Registro
       });
 
       let productosData = response.data || [];
@@ -709,8 +710,11 @@ function FormularioRapido({ onCerrar, onGuardar }) {
   const [formData, setFormData] = useState({
     descripcion: '',
     cantidad_ingresada: '',
-    imagen: ''
+    imagen: '',
+    precio_compra_unidad: '',
+    precio_venta_unidad: ''
   });
+  const [ubicacion, setUbicacion] = useState('tienda');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -718,15 +722,29 @@ function FormularioRapido({ onCerrar, onGuardar }) {
     setLoading(true);
 
     try {
-      // Convertir cantidad_ingresada al campo de stock de la tienda
+      const cantidad = formData.cantidad_ingresada ? parseInt(formData.cantidad_ingresada) : 0;
       const dataToSend = {
         descripcion: formData.descripcion,
         imagen: formData.imagen,
-        [APP_CONFIG.campo_stock]: parseInt(formData.cantidad_ingresada)
+        tienda_origen: APP_CONFIG.tienda,
+        stock_deposito: ubicacion === 'deposito' ? cantidad : 0,
+        [APP_CONFIG.campo_stock]: ubicacion === 'tienda' ? cantidad : 0
       };
 
+      // Agregar precios si fueron ingresados
+      if (formData.precio_compra_unidad) {
+        dataToSend.precio_compra_unidad = parseFloat(formData.precio_compra_unidad);
+      }
+      if (formData.precio_venta_unidad) {
+        dataToSend.precio_venta_unidad = parseFloat(formData.precio_venta_unidad);
+      }
+
       await createProductoRapido(dataToSend);
-      success('Producto registrado en proceso');
+
+      // Mensaje según si tiene precios o no
+      const tienePrecio = formData.precio_compra_unidad && formData.precio_venta_unidad;
+      const mensaje = tienePrecio ? 'Producto registrado como completado' : 'Producto registrado en proceso';
+      success(mensaje);
       setTimeout(() => onGuardar(), 1500);
     } catch (error) {
       mostrarError('Error al registrar producto');
@@ -772,11 +790,10 @@ function FormularioRapido({ onCerrar, onGuardar }) {
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-lg font-bold mb-2">Cantidad Ingresada *</label>
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Cantidad Ingresada</label>
             <input
               type="number"
-              required
               value={formData.cantidad_ingresada}
               onChange={(e) => setFormData({ ...formData, cantidad_ingresada: e.target.value })}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
@@ -784,12 +801,99 @@ function FormularioRapido({ onCerrar, onGuardar }) {
             />
           </div>
 
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Ubicacion del stock</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setUbicacion('tienda')}
+                className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                  ubicacion === 'tienda'
+                    ? 'bg-amber-500 text-white border-amber-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-amber-400'
+                }`}
+              >
+                Tienda ({APP_CONFIG.nombre_corto})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUbicacion('deposito')}
+                className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                  ubicacion === 'deposito'
+                    ? 'bg-orange-500 text-white border-orange-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
+                }`}
+              >
+                Deposito
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Precio de Compra (Bs)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.precio_compra_unidad}
+              onChange={(e) => setFormData({ ...formData, precio_compra_unidad: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              placeholder="2.50"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Precio de Venta (Bs)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.precio_venta_unidad}
+              onChange={(e) => setFormData({ ...formData, precio_venta_unidad: e.target.value })}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              placeholder="5.00"
+            />
+          </div>
+
+          {/* Cálculo en tiempo real de ganancia */}
+          {formData.precio_compra_unidad && formData.precio_venta_unidad && (() => {
+            const precioCompra = parseFloat(formData.precio_compra_unidad) || 0;
+            const precioVenta = parseFloat(formData.precio_venta_unidad) || 0;
+            const ganancia = precioVenta - precioCompra;
+            const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+            const esGanancia = ganancia >= 0;
+
+            return (
+              <div className={`mb-6 p-4 rounded-lg border-2 ${
+                esGanancia ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'
+              }`}>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Ganancia por unidad</p>
+                    <p className={`text-xl font-bold ${esGanancia ? 'text-green-700' : 'text-red-700'}`}>
+                      {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Porcentaje</p>
+                    <p className={`text-xl font-bold ${esGanancia ? 'text-green-700' : 'text-red-700'}`}>
+                      {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                {!esGanancia && (
+                  <p className="text-center text-sm text-red-600 mt-2 font-semibold">
+                    ⚠️ Estás vendiendo con pérdida
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-amber-500 text-white py-4 rounded-lg font-bold text-2xl hover:bg-amber-600 disabled:bg-gray-400"
           >
-            {loading ? '⏳ Guardando...' : '💾 Guardar en Proceso'}
+            {loading ? '⏳ Guardando...' : '💾 Guardar Producto'}
           </button>
         </form>
       </div>

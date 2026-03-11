@@ -714,6 +714,7 @@ function FormularioRapido({ onCerrar, onGuardar }) {
     precio_compra_unidad: '',
     precio_venta_unidad: ''
   });
+  const [ubicacion, setUbicacion] = useState('tienda');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -721,12 +722,13 @@ function FormularioRapido({ onCerrar, onGuardar }) {
     setLoading(true);
 
     try {
-      // Convertir cantidad_ingresada al campo de stock de la tienda (puede ser 0 o vacío)
+      const cantidad = formData.cantidad_ingresada ? parseInt(formData.cantidad_ingresada) : 0;
       const dataToSend = {
         descripcion: formData.descripcion,
         imagen: formData.imagen,
         tienda_origen: APP_CONFIG.tienda,
-        [APP_CONFIG.campo_stock]: formData.cantidad_ingresada ? parseInt(formData.cantidad_ingresada) : 0
+        stock_deposito: ubicacion === 'deposito' ? cantidad : 0,
+        [APP_CONFIG.campo_stock]: ubicacion === 'tienda' ? cantidad : 0
       };
 
       // Agregar precios si fueron ingresados
@@ -797,6 +799,34 @@ function FormularioRapido({ onCerrar, onGuardar }) {
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
               placeholder="120"
             />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-lg font-bold mb-2">Ubicacion del stock</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setUbicacion('tienda')}
+                className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                  ubicacion === 'tienda'
+                    ? 'bg-amber-500 text-white border-amber-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-amber-400'
+                }`}
+              >
+                Tienda ({APP_CONFIG.nombre_corto})
+              </button>
+              <button
+                type="button"
+                onClick={() => setUbicacion('deposito')}
+                className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                  ubicacion === 'deposito'
+                    ? 'bg-orange-500 text-white border-orange-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400'
+                }`}
+              >
+                Deposito
+              </button>
+            </div>
           </div>
 
           <div className="mb-4">
