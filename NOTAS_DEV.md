@@ -939,6 +939,16 @@ apps/*/src/components/FormularioLoteProveedor  → selector ubicacion en Paso 1
 apps/*/src/components/FormularioLoteMarca      → selector ubicacion en Paso 1
 ```
 
+### Fix: Columna sticky sobre menú hamburguesa
+
+**Problema:** La columna "Producto" (sticky) aparecía encima del menú hamburguesa al abrirlo.
+**Causa:** El contenedor `overflow-x-auto` no creaba un contexto de apilamiento, por lo que los elementos sticky con `z-10` competían directamente con el menú (`z-50`).
+**Solución:** Agregar `relative z-0` al contenedor de la tabla — crea un contexto de apilamiento que encierra los sticky, y el menú (z-50) siempre queda por encima.
+
+```jsx
+<div className="overflow-x-auto relative z-0">
+```
+
 ### Pendiente (Fase 2)
 
 - Sistema de variantes (color, medida, peso, tamaño) con stock propio por variante
