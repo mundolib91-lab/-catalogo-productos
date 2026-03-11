@@ -9,7 +9,7 @@ function MenuHamburguesa({ vistaActual, onCambiarVista }) {
     { id: 'atencion', nombre: 'Atención al Cliente', icono: '👥', color: 'blue' },
     { id: 'faltantes', nombre: 'Central Faltantes', icono: '🔴', color: 'red' },
     { id: 'gestion', nombre: 'Gestión de Datos', icono: '⚙️', color: 'purple' },
-    { id: 'inventario', nombre: 'Inventario', icono: '📦', color: 'green', proximamente: true },
+    { id: 'inventario', nombre: 'Inventario', icono: '📦', color: 'green' },
     { id: 'compras', nombre: 'Compras', icono: '🛒', color: 'indigo', proximamente: true }
   ];
 

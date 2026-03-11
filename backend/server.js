@@ -1310,6 +1310,123 @@ app.get('/api/transferencias', async (req, res) => {
   }
 });
 
+// ==================== ENDPOINTS INVENTARIO ====================
+
+// Obtener todos los productos existentes para inventario
+app.get('/api/inventario', async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 50 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabase
+      .from('productos')
+      .select('id, descripcion, nombre, imagen, marca, proveedor, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili', { count: 'exact' })
+      .eq('estado_registro', 'existente')
+      .order('descripcion', { ascending: true })
+      .range(offset, offset + parseInt(limit) - 1);
+
+    if (search) {
+      query = query.or(`descripcion.ilike.%${search}%,nombre.ilike.%${search}%,marca.ilike.%${search}%`);
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        totalPages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar stock de una ubicación específica
+app.patch('/api/inventario/:id/stock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ubicacion, cantidad } = req.body;
+
+    const ubicacionesValidas = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    if (!ubicacionesValidas.includes(ubicacion)) {
+      return res.status(400).json({ success: false, error: 'Ubicación inválida' });
+    }
+    if (cantidad === undefined || cantidad === null || parseInt(cantidad) < 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad inválida' });
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({ [ubicacion]: parseInt(cantidad) })
+      .eq('id', id)
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Trasladar unidades del depósito a una tienda
+app.post('/api/inventario/trasladar', async (req, res) => {
+  try {
+    const { producto_id, tienda_destino, cantidad } = req.body;
+
+    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
+    if (!tiendasValidas.includes(tienda_destino)) {
+      return res.status(400).json({ success: false, error: 'Tienda inválida' });
+    }
+    if (!cantidad || parseInt(cantidad) <= 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad inválida' });
+    }
+
+    const { data: producto, error: errorGet } = await supabase
+      .from('productos')
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .eq('id', producto_id)
+      .single();
+
+    if (errorGet) throw errorGet;
+
+    const cant = parseInt(cantidad);
+    if ((producto.stock_deposito || 0) < cant) {
+      return res.status(400).json({
+        success: false,
+        error: `Stock insuficiente en depósito. Disponible: ${producto.stock_deposito || 0}, Solicitado: ${cant}`
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({
+        stock_deposito: (producto.stock_deposito || 0) - cant,
+        [`stock_${tienda_destino}`]: (producto[`stock_${tienda_destino}`] || 0) + cant
+      })
+      .eq('id', producto_id)
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+      mensaje: `${cant} unidades trasladadas de depósito a ${tienda_destino}`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 20. Endpoint de prueba
 app.get('/', (req, res) => {
   res.json({
