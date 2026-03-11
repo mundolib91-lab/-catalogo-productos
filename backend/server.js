@@ -741,7 +741,7 @@ app.get('/api/productos/faltantes/lista', async (req, res) => {
 // Crear lote de productos (por proveedor o por marca)
 app.post('/api/productos/lote', async (req, res) => {
   try {
-    const { tipo, proveedor, marca, productos, tienda } = req.body;
+    const { tipo, proveedor, marca, productos, tienda, ubicacion = 'tienda' } = req.body;
 
     console.log('📦 Recibiendo lote de productos:', {
       tipo,
@@ -795,8 +795,10 @@ app.post('/api/productos/lote', async (req, res) => {
         productoBase.fecha_modif_precio_venta = new Date().toISOString();
       }
 
-      // Asignar stock al campo específico de la tienda
-      if (tienda === 'mundo_lib') {
+      // Asignar stock según ubicación elegida
+      if (ubicacion === 'deposito') {
+        productoBase.stock_deposito = cantidad;
+      } else if (tienda === 'mundo_lib') {
         productoBase.stock_mundo_lib = cantidad;
       } else if (tienda === 'majoli') {
         productoBase.stock_majoli = cantidad;

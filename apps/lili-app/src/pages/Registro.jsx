@@ -133,7 +133,8 @@ function Registro({ menuHamburguesa }) {
           proveedor: dataLote.proveedor,
           marca: dataLote.marca,
           productos: dataLote.productos,
-          tienda: APP_CONFIG.tienda // Agregar tienda para asignar stock correcto
+          tienda: APP_CONFIG.tienda,
+          ubicacion: dataLote.ubicacion || 'tienda'
         }),
       });
 

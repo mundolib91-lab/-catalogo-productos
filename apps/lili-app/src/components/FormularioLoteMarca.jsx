@@ -9,6 +9,7 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
   const [marcaSeleccionada, setMarcaSeleccionada] = useState('');
   const [marcas, setMarcas] = useState([]);
   const [productosLote, setProductosLote] = useState([]);
+  const [ubicacion, setUbicacion] = useState('tienda');
   const [guardando, setGuardando] = useState(false);
 
   const [productoActual, setProductoActual] = useState({
@@ -48,10 +49,6 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
 
     if (!productoActual.descripcion?.trim()) {
       nuevosErrores.descripcion = 'La descripción es obligatoria';
-    }
-
-    if (!productoActual.cantidad || parseInt(productoActual.cantidad) <= 0) {
-      nuevosErrores.cantidad = 'La cantidad es obligatoria y debe ser mayor a 0';
     }
 
     setErrores(nuevosErrores);
@@ -129,7 +126,8 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
 
       await onSubmitLote({
         marca: marcaSeleccionada,
-        productos: productosNormalizados
+        productos: productosNormalizados,
+        ubicacion
       });
 
       setMarcaSeleccionada('');
@@ -144,6 +142,7 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
         precio_venta: ''
       });
       setProductoEditando(null);
+      setUbicacion('tienda');
       setPaso(1);
       onClose();
     } catch (error) {
@@ -222,6 +221,36 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                       💡 Sugerencias: {marcas.slice(0, 3).join(', ')}{marcas.length > 3 ? '...' : ''}
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-3">
+                    Ubicacion del stock del lote
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setUbicacion('tienda')}
+                      className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                        ubicacion === 'tienda'
+                          ? 'bg-pink-500 text-white border-pink-500'
+                          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-pink-400'
+                      }`}
+                    >
+                      Tienda
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUbicacion('deposito')}
+                      className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                        ubicacion === 'deposito'
+                          ? 'bg-orange-500 text-white border-orange-500'
+                          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-orange-400'
+                      }`}
+                    >
+                      Deposito
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-4">
@@ -326,20 +355,6 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                     />
                   </div>
 
-                  {/* Proveedor */}
-                  <div>
-                    <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
-                      Proveedor
-                    </label>
-                    <input
-                      type="text"
-                      value={productoActual.proveedor}
-                      onChange={(e) => setProductoActual({ ...productoActual, proveedor: e.target.value })}
-                      className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 bg-white dark:bg-gray-700 dark:text-white"
-                      placeholder="Ej: Distribuidora ABC..."
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
                       Descripción <span className="text-red-500">*</span>
@@ -356,19 +371,14 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">
-                        Cantidad <span className="text-red-500">*</span>
+                        Cantidad
                       </label>
                       <input
                         type="number"
                         value={productoActual.cantidad}
                         onChange={(e) => setProductoActual({ ...productoActual, cantidad: e.target.value })}
-                        className={`w-full px-4 py-3 text-lg border-2 rounded-lg focus:ring-2 focus:ring-pink-500 bg-white dark:bg-gray-700 dark:text-white ${
-                          errores.cantidad ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-pink-500 bg-white dark:bg-gray-700 dark:text-white"
                       />
-                      {errores.cantidad && (
-                        <p className="text-red-600 text-base mt-1">{errores.cantidad}</p>
-                      )}
                     </div>
 
                     <div>
@@ -397,6 +407,41 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                       />
                     </div>
                   </div>
+
+                  {/* Cálculo en tiempo real de ganancia */}
+                  {productoActual.precio_compra && productoActual.precio_venta && (() => {
+                    const precioCompra = parseFloat(productoActual.precio_compra) || 0;
+                    const precioVenta = parseFloat(productoActual.precio_venta) || 0;
+                    const ganancia = precioVenta - precioCompra;
+                    const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+                    const esGanancia = ganancia >= 0;
+
+                    return (
+                      <div className={`p-4 rounded-lg border-2 ${
+                        esGanancia ? 'bg-green-50 dark:bg-green-900/20 border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-400'
+                      }`}>
+                        <div className="grid grid-cols-2 gap-4 text-center">
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Ganancia por unidad</p>
+                            <p className={`text-xl font-bold ${esGanancia ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Porcentaje</p>
+                            <p className={`text-xl font-bold ${esGanancia ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        {!esGanancia && (
+                          <p className="text-center text-sm text-red-600 dark:text-red-400 mt-2 font-semibold">
+                            ⚠️ Estás vendiendo con pérdida
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <button
                     type="button"

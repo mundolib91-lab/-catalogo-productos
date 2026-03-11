@@ -9,6 +9,7 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
   const [marcaSeleccionada, setMarcaSeleccionada] = useState('');
   const [marcas, setMarcas] = useState([]);
   const [productosLote, setProductosLote] = useState([]);
+  const [ubicacion, setUbicacion] = useState('tienda');
   const [guardando, setGuardando] = useState(false);
 
   const [productoActual, setProductoActual] = useState({
@@ -125,7 +126,8 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
 
       await onSubmitLote({
         marca: marcaSeleccionada,
-        productos: productosNormalizados
+        productos: productosNormalizados,
+        ubicacion
       });
 
       setMarcaSeleccionada('');
@@ -140,6 +142,7 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
         precio_venta: ''
       });
       setProductoEditando(null);
+      setUbicacion('tienda');
       setPaso(1);
       onClose();
     } catch (error) {
@@ -218,6 +221,36 @@ function FormularioLoteMarca({ isOpen, onClose, onSubmitLote }) {
                       💡 Sugerencias: {marcas.slice(0, 3).join(', ')}{marcas.length > 3 ? '...' : ''}
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-lg font-bold text-gray-700 dark:text-gray-300 mb-3">
+                    Ubicacion del stock del lote
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setUbicacion('tienda')}
+                      className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                        ubicacion === 'tienda'
+                          ? 'bg-pink-500 text-white border-pink-500'
+                          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-pink-400'
+                      }`}
+                    >
+                      Tienda
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUbicacion('deposito')}
+                      className={`py-3 rounded-xl font-bold text-base border-2 transition-colors ${
+                        ubicacion === 'deposito'
+                          ? 'bg-orange-500 text-white border-orange-500'
+                          : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-orange-400'
+                      }`}
+                    >
+                      Deposito
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-4">
