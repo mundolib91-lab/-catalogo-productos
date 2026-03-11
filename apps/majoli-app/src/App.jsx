@@ -3,6 +3,7 @@ import Registro from './pages/Registro';
 import Atencion from './pages/Atencion';
 import CentralFaltantes from './pages/CentralFaltantes';
 import GestionDatos from './pages/GestionDatos';
+import Inventario from './pages/Inventario';
 import MenuHamburguesa from './components/MenuHamburguesa';
 import APP_CONFIG from './config';
 
@@ -14,7 +15,7 @@ function App() {
     // Detectar parámetro ?view en la URL (para PWA individual)
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
-    if (view === 'atencion' || view === 'registro' || view === 'faltantes' || view === 'gestion') {
+    if (view === 'atencion' || view === 'registro' || view === 'faltantes' || view === 'gestion' || view === 'inventario') {
       setVistaActual(view);
     }
 
@@ -37,6 +38,8 @@ function App() {
           <CentralFaltantes menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         ) : vistaActual === 'gestion' ? (
           <GestionDatos menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
+        ) : vistaActual === 'inventario' ? (
+          <Inventario menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         ) : (
           <Registro menuHamburguesa={<MenuHamburguesa vistaActual={vistaActual} onCambiarVista={setVistaActual} />} />
         )}
@@ -100,11 +103,14 @@ function App() {
             </button>
 
             <button
-              className="w-full text-left px-4 py-3 rounded-lg font-semibold text-gray-400 dark:text-gray-600 cursor-not-allowed"
-              disabled
+              onClick={() => setVistaActual('inventario')}
+              className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-colors ${
+                vistaActual === 'inventario'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
             >
               📦 Inventario
-              <span className="text-xs block mt-1">(Próximamente)</span>
             </button>
 
             <button
@@ -126,6 +132,8 @@ function App() {
           <CentralFaltantes />
         ) : vistaActual === 'gestion' ? (
           <GestionDatos />
+        ) : vistaActual === 'inventario' ? (
+          <Inventario />
         ) : (
           <Registro />
         )}

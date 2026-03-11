@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getProducto, updateProducto } from '../utils/api';
+import { getProducto, updateProducto, deleteProducto } from '../utils/api';
 import SelectorImagen from '../components/SelectorImagen';
 import APP_CONFIG from '../config';
 
@@ -9,6 +9,7 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     cargarProducto();
@@ -80,6 +81,25 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
       alert('❌ Error al actualizar: ' + error.message);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleEliminar = async () => {
+    const confirmacion = window.confirm(
+      `¿Estás seguro de eliminar el producto "${formData.descripcion || formData.nombre_producto}"?\n\nEsta acción no se puede deshacer.`
+    );
+
+    if (!confirmacion) return;
+
+    setEliminando(true);
+    try {
+      await deleteProducto(productoId);
+      alert('✅ Producto eliminado exitosamente');
+      onGuardar(); // Recargar lista
+      onCerrar(); // Cerrar modal
+    } catch (error) {
+      alert('❌ Error al eliminar: ' + error.message);
+      setEliminando(false);
     }
   };
 
@@ -299,18 +319,58 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
                 </label>
                 <input
                   type="text"
-                  value={producto?.ganancia_unidad?.toFixed(2) || '0.00'}
+                  value={(() => {
+                    const precioCompra = parseFloat(formData.precio_compra_unidad) || 0;
+                    const precioVenta = parseFloat(formData.precio_venta_unidad) || 0;
+                    const ganancia = precioVenta - precioCompra;
+                    return ganancia.toFixed(2);
+                  })()}
                   disabled
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-100 font-bold text-green-600"
                 />
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-green-100 rounded-lg">
-              <p className="text-lg text-green-800">
-                <span className="font-bold">Porcentaje de ganancia:</span> {producto?.porcentaje_ganancia?.toFixed(2) || '0.00'}%
-              </p>
-            </div>
+            {/* Cálculo en tiempo real de ganancia y porcentaje */}
+            {(() => {
+              const precioCompra = parseFloat(formData.precio_compra_unidad) || 0;
+              const precioVenta = parseFloat(formData.precio_venta_unidad) || 0;
+              const ganancia = precioVenta - precioCompra;
+              const porcentaje = precioCompra > 0 ? ((ganancia / precioCompra) * 100) : 0;
+              const esGanancia = ganancia >= 0;
+
+              return (
+                <div className={`mt-4 p-4 rounded-lg border-2 ${
+                  esGanancia
+                    ? 'bg-green-100 border-green-400'
+                    : 'bg-red-100 border-red-400'
+                }`}>
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-base text-gray-600 mb-1">Ganancia por unidad</p>
+                      <p className={`text-2xl font-bold ${
+                        esGanancia ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {esGanancia ? '+' : ''} Bs {ganancia.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-base text-gray-600 mb-1">Porcentaje de ganancia</p>
+                      <p className={`text-2xl font-bold ${
+                        esGanancia ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {esGanancia ? '+' : ''} {porcentaje.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                  {!esGanancia && (
+                    <p className="text-center text-base text-red-600 mt-2 font-semibold">
+                      ⚠️ Estás vendiendo con pérdida
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Stock */}
@@ -411,6 +471,14 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
         className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-lg font-bold hover:bg-gray-300"
       >
         Cerrar
+      </button>
+      <button
+        type="button"
+        onClick={handleEliminar}
+        disabled={eliminando}
+        className="flex-1 bg-red-500 text-white py-4 rounded-lg font-bold hover:bg-red-600 disabled:bg-gray-400"
+      >
+        {eliminando ? '⏳ Eliminando...' : '🗑️ Eliminar'}
       </button>
       <button
         type="button"

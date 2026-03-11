@@ -77,13 +77,29 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
       </div>
 
       {/* Botones */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <label
           className={`${
             subiendo ? 'bg-gray-300' : 'bg-blue-500 hover:bg-blue-600'
-          } text-white py-2 px-4 rounded-lg font-bold text-center cursor-pointer transition-colors`}
+          } text-white py-3 px-4 rounded-lg font-bold text-center cursor-pointer transition-colors`}
         >
-          {subiendo ? '⏳ Subiendo...' : '📷 Seleccionar Imagen'}
+          {subiendo ? '⏳ Subiendo...' : '📷 Tomar Foto'}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            disabled={subiendo}
+            className="hidden"
+          />
+        </label>
+
+        <label
+          className={`${
+            subiendo ? 'bg-gray-300' : 'bg-green-500 hover:bg-green-600'
+          } text-white py-3 px-4 rounded-lg font-bold text-center cursor-pointer transition-colors`}
+        >
+          {subiendo ? '⏳ Subiendo...' : '🖼️ Desde Galería'}
           <input
             type="file"
             accept="image/*"
@@ -92,18 +108,18 @@ function SelectorImagen({ imagenActual, onImagenCambiada, productId = null }) {
             className="hidden"
           />
         </label>
-
-        {previsualizacion && (
-          <button
-            type="button"
-            onClick={handleEliminar}
-            disabled={subiendo}
-            className="bg-red-100 text-red-600 py-2 px-4 rounded-lg font-bold hover:bg-red-200 disabled:bg-gray-200"
-          >
-            🗑️ Quitar
-          </button>
-        )}
       </div>
+
+      {previsualizacion && (
+        <button
+          type="button"
+          onClick={handleEliminar}
+          disabled={subiendo}
+          className="w-full bg-red-100 text-red-600 py-3 px-4 rounded-lg font-bold hover:bg-red-200 disabled:bg-gray-200"
+        >
+          🗑️ Quitar Imagen
+        </button>
+      )}
 
       <p className="text-base text-gray-500 mt-2">
         Formatos: JPG, PNG, WebP • Máx: 10MB

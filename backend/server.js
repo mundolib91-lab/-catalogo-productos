@@ -416,8 +416,9 @@ app.get('/api/reportes/stock-bajo', async (req, res) => {
 app.get('/api/productos/estado/:estado', async (req, res) => {
   try {
     const { estado } = req.params; // proceso, completado, existente
-    const { page = 1, limit = 20, search = '', tienda = null } = req.query;
+    const { page = 1, limit = 20, search = '', tienda = null, incluir_sin_stock = 'false' } = req.query;
     const offset = (page - 1) * limit;
+    const incluirSinStock = incluir_sin_stock === 'true';
 
     let query = supabase
       .from('productos')
@@ -431,14 +432,27 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
       query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
     }
 
-    // Filtrar por tienda (solo productos con stock > 0 en esa tienda)
+    // Filtrar por tienda
     if (tienda) {
-      if (tienda === 'mundo_lib') {
-        query = query.gt('stock_mundo_lib', 0);
-      } else if (tienda === 'majoli') {
-        query = query.gt('stock_majoli', 0);
-      } else if (tienda === 'lili') {
-        query = query.gt('stock_lili', 0);
+      if (incluirSinStock) {
+        // Para Registro: mostrar productos de la tienda (con o sin stock)
+        // Incluir productos donde: tienda_origen = tienda O stock > 0 en esa tienda
+        if (tienda === 'mundo_lib') {
+          query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
+        } else if (tienda === 'majoli') {
+          query = query.or('tienda_origen.eq.majoli,stock_majoli.gt.0');
+        } else if (tienda === 'lili') {
+          query = query.or('tienda_origen.eq.lili,stock_lili.gt.0');
+        }
+      } else {
+        // Para Atención: solo productos con stock > 0
+        if (tienda === 'mundo_lib') {
+          query = query.gt('stock_mundo_lib', 0);
+        } else if (tienda === 'majoli') {
+          query = query.gt('stock_majoli', 0);
+        } else if (tienda === 'lili') {
+          query = query.gt('stock_lili', 0);
+        }
       }
     }
 
@@ -504,7 +518,7 @@ app.put('/api/productos/:id/completar', async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    // Obtener producto actual para validar con datos actualizados
+    // Obtener producto actual
     const { data: productoActual, error: errorGet } = await supabase
       .from('productos')
       .select('*')
@@ -513,43 +527,7 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 
     if (errorGet) throw errorGet;
 
-    // Combinar datos actuales con updates para validación
-    const productoFinal = { ...productoActual, ...updates };
-
-    // Validar que tenga TODOS los datos mínimos requeridos
-    // Para stock, verificar que al menos una tienda tenga stock > 0
-    const tieneStock = (
-      (productoFinal.stock_mundo_lib != null && productoFinal.stock_mundo_lib > 0) ||
-      (productoFinal.stock_majoli != null && productoFinal.stock_majoli > 0) ||
-      (productoFinal.stock_lili != null && productoFinal.stock_lili > 0)
-    );
-
-    const validaciones = {
-      imagen: productoFinal.imagen && productoFinal.imagen.trim() !== '',
-      precio_compra: productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0,
-      precio_venta: productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0,
-      descripcion: productoFinal.descripcion && productoFinal.descripcion.trim() !== '',
-      stock: tieneStock
-    };
-
-    // Verificar si falta algún campo
-    const camposFaltantes = Object.entries(validaciones)
-      .filter(([campo, valido]) => !valido)
-      .map(([campo]) => campo);
-
-    if (camposFaltantes.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Faltan datos requeridos para completar: ${camposFaltantes.join(', ')}`,
-        camposFaltantes
-      });
-    }
-
-    // Marcar como completado
-    updates.estado_registro = 'completado';
-    updates.fecha_completado = new Date().toISOString();
-
-    // Actualizar fechas de modificación de precios
+    // Actualizar fechas de modificación de precios si se modifican
     if (updates.precio_compra_unidad !== undefined) {
       updates.fecha_modif_precio_compra = new Date().toISOString();
     }
@@ -557,6 +535,27 @@ app.put('/api/productos/:id/completar', async (req, res) => {
       updates.fecha_modif_precio_venta = new Date().toISOString();
     }
 
+    // Combinar datos actuales con updates para determinar el estado final
+    const productoFinal = { ...productoActual, ...updates };
+
+    // Verificar si tiene TODOS los datos necesarios para estar completado
+    const tieneImagen = productoFinal.imagen && productoFinal.imagen.trim() !== '';
+    const tieneDescripcion = productoFinal.descripcion && productoFinal.descripcion.trim() !== '';
+    const tienePrecioCompra = productoFinal.precio_compra_unidad != null && productoFinal.precio_compra_unidad > 0;
+    const tienePrecioVenta = productoFinal.precio_venta_unidad != null && productoFinal.precio_venta_unidad > 0;
+
+    const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+
+    // Determinar estado según si está completo o no
+    if (estaCompleto) {
+      updates.estado_registro = 'completado';
+      updates.fecha_completado = new Date().toISOString();
+    } else {
+      // Si no está completo, asegurar que se mantiene en proceso
+      updates.estado_registro = 'proceso';
+    }
+
+    // Actualizar producto (siempre guarda los cambios, sin importar si está completo)
     const { data, error } = await supabase
       .from('productos')
       .update(updates)
@@ -566,26 +565,64 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 
     if (error) throw error;
 
-    res.json({ success: true, data });
+    res.json({
+      success: true,
+      data,
+      mensaje: estaCompleto
+        ? 'Producto completado exitosamente'
+        : 'Datos guardados. Completa imagen, descripción y ambos precios para marcar como completado'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// 10. Crear producto con datos mínimos (para "en proceso")
+// 10. Crear producto con datos mínimos (para "en proceso" o "completado")
 app.post('/api/productos/rapido', async (req, res) => {
   try {
-    // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock
+    // ESTRATEGIA: INSERT sin stock, luego UPDATE con stock y precios
     // Esto evita cualquier problema con DEFAULT en el INSERT
+
+    // Determinar estado según si tiene datos completos para Atención al Cliente
+    // Requiere: imagen, descripción y ambos precios (cantidad NO requerida)
+    const tieneImagen = req.body.imagen && req.body.imagen.trim() !== '';
+    const tieneDescripcion = req.body.descripcion && req.body.descripcion.trim() !== '';
+    const tienePrecioCompra = req.body.precio_compra_unidad !== undefined &&
+                              req.body.precio_compra_unidad !== null &&
+                              parseFloat(req.body.precio_compra_unidad) > 0;
+    const tienePrecioVenta = req.body.precio_venta_unidad !== undefined &&
+                             req.body.precio_venta_unidad !== null &&
+                             parseFloat(req.body.precio_venta_unidad) > 0;
+
+    const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+    const estadoInicial = estaCompleto ? 'completado' : 'proceso';
 
     // 1. Insertar producto base SIN stock
     const productoBase = {
       nombre: req.body.descripcion,
       descripcion: req.body.descripcion,
       imagen: req.body.imagen || '',
-      estado_registro: 'proceso',
+      tienda_origen: req.body.tienda_origen || null,
+      estado_registro: estadoInicial,
       fecha_ingreso: new Date().toISOString()
     };
+
+    // Si está completo, agregar precios y fechas
+    if (estaCompleto) {
+      productoBase.precio_compra_unidad = parseFloat(req.body.precio_compra_unidad);
+      productoBase.precio_venta_unidad = parseFloat(req.body.precio_venta_unidad);
+      productoBase.fecha_completado = new Date().toISOString();
+      productoBase.fecha_modif_precio_compra = new Date().toISOString();
+      productoBase.fecha_modif_precio_venta = new Date().toISOString();
+    } else if (tienePrecioCompra || tienePrecioVenta) {
+      // Si tiene precios pero no está completo, guardarlos igual
+      if (tienePrecioCompra) {
+        productoBase.precio_compra_unidad = parseFloat(req.body.precio_compra_unidad);
+      }
+      if (tienePrecioVenta) {
+        productoBase.precio_venta_unidad = parseFloat(req.body.precio_venta_unidad);
+      }
+    }
 
     const { data: newProducto, error: insertError } = await supabase
       .from('productos')
@@ -704,12 +741,13 @@ app.get('/api/productos/faltantes/lista', async (req, res) => {
 // Crear lote de productos (por proveedor o por marca)
 app.post('/api/productos/lote', async (req, res) => {
   try {
-    const { tipo, proveedor, marca, productos } = req.body;
+    const { tipo, proveedor, marca, productos, tienda, ubicacion = 'tienda' } = req.body;
 
     console.log('📦 Recibiendo lote de productos:', {
       tipo,
       proveedor,
       marca,
+      tienda,
       cantidadProductos: productos?.length
     });
 
@@ -724,16 +762,49 @@ app.post('/api/productos/lote', async (req, res) => {
 
     // Preparar productos para insertar
     const productosParaInsertar = productos.map((producto, index) => {
+      const cantidad = parseInt(producto.cantidad) || 0;
+      const precioCompra = parseFloat(producto.precio_compra) || 0;
+      const precioVenta = producto.precio_venta ? parseFloat(producto.precio_venta) : null;
+
+      // Determinar estado según si tiene datos completos para Atención al Cliente
+      // Requiere: imagen, descripción y ambos precios (cantidad NO requerida)
+      const tieneImagen = producto.imagen && producto.imagen.trim() !== '';
+      const tieneDescripcion = producto.descripcion && producto.descripcion.trim() !== '';
+      const tienePrecioCompra = precioCompra > 0;
+      const tienePrecioVenta = precioVenta !== null && precioVenta > 0;
+
+      const estaCompleto = tieneImagen && tieneDescripcion && tienePrecioCompra && tienePrecioVenta;
+      const estadoInicial = estaCompleto ? 'completado' : 'proceso';
+
       const productoBase = {
         imagen: producto.imagen || '',
         nombre: producto.nombre || '',
         descripcion: producto.descripcion || '',
-        cantidad_ingresada: parseInt(producto.cantidad) || 0,
-        precio_compra_unidad: parseFloat(producto.precio_compra) || 0,
-        precio_venta_unidad: producto.precio_venta ? parseFloat(producto.precio_venta) : null,
-        estado_registro: 'proceso',
+        tienda_origen: tienda || null,
+        cantidad_ingresada: cantidad,
+        precio_compra_unidad: precioCompra,
+        precio_venta_unidad: precioVenta,
+        estado_registro: estadoInicial,
         created_at: new Date().toISOString()
       };
+
+      // Si está completado, agregar fechas
+      if (estadoInicial === 'completado') {
+        productoBase.fecha_completado = new Date().toISOString();
+        productoBase.fecha_modif_precio_compra = new Date().toISOString();
+        productoBase.fecha_modif_precio_venta = new Date().toISOString();
+      }
+
+      // Asignar stock según ubicación elegida
+      if (ubicacion === 'deposito') {
+        productoBase.stock_deposito = cantidad;
+      } else if (tienda === 'mundo_lib') {
+        productoBase.stock_mundo_lib = cantidad;
+      } else if (tienda === 'majoli') {
+        productoBase.stock_majoli = cantidad;
+      } else if (tienda === 'lili') {
+        productoBase.stock_lili = cantidad;
+      }
 
       // Asignar proveedor o marca según el tipo
       if (tipo === 'proveedor' && proveedor) {
@@ -747,6 +818,7 @@ app.post('/api/productos/lote', async (req, res) => {
       console.log(`  Producto ${index + 1}:`, {
         descripcion: productoBase.descripcion,
         cantidad: productoBase.cantidad_ingresada,
+        stock_tienda: cantidad,
         precio: productoBase.precio_compra_unidad
       });
 
@@ -775,6 +847,79 @@ app.post('/api/productos/lote', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error al crear lote de productos:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Migrar stock de productos viejos (temporal - para arreglar productos guardados antes del fix)
+app.post('/api/productos/migrar-stock', async (req, res) => {
+  try {
+    console.log('🔧 Iniciando migración de stock...');
+
+    // Obtener todos los productos en proceso/completado con cantidad_ingresada pero sin stock por tienda
+    const { data: productos, error: fetchError } = await supabase
+      .from('productos')
+      .select('*')
+      .in('estado_registro', ['proceso', 'completado'])
+      .gt('cantidad_ingresada', 0);
+
+    if (fetchError) throw fetchError;
+
+    if (!productos || productos.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No hay productos para migrar',
+        migrados: 0
+      });
+    }
+
+    console.log(`📦 Encontrados ${productos.length} productos candidatos`);
+
+    let migrados = 0;
+
+    for (const producto of productos) {
+      const cantidad = producto.cantidad_ingresada;
+
+      // Solo migrar si todos los stocks están en 0
+      if (producto.stock_mundo_lib === 0 && producto.stock_majoli === 0 && producto.stock_lili === 0) {
+        // Determinar tienda por tienda_origen o asignar a mundo_lib por defecto
+        const tienda = producto.tienda_origen || 'mundo_lib';
+
+        const updates = {};
+        if (tienda === 'mundo_lib') {
+          updates.stock_mundo_lib = cantidad;
+        } else if (tienda === 'majoli') {
+          updates.stock_majoli = cantidad;
+        } else if (tienda === 'lili') {
+          updates.stock_lili = cantidad;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          const { error: updateError } = await supabase
+            .from('productos')
+            .update(updates)
+            .eq('id', producto.id);
+
+          if (!updateError) {
+            migrados++;
+            console.log(`  ✅ Producto ${producto.id} migrado: ${cantidad} → stock_${tienda}`);
+          } else {
+            console.error(`  ❌ Error migrando producto ${producto.id}:`, updateError);
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Migración completada: ${migrados} productos actualizados`);
+
+    res.json({
+      success: true,
+      message: `${migrados} productos migrados exitosamente`,
+      migrados,
+      total: productos.length
+    });
+  } catch (error) {
+    console.error('❌ Error en migración:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1163,6 +1308,132 @@ app.get('/api/transferencias', async (req, res) => {
     res.json({ success: true, data });
   } catch (error) {
     console.error('❌ Error al obtener transferencias:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==================== ENDPOINTS INVENTARIO ====================
+
+// Obtener todos los productos existentes para inventario
+app.get('/api/inventario', async (req, res) => {
+  try {
+    const { search = '', page = 1, limit = 50, tienda = null } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = supabase
+      .from('productos')
+      .select('id, descripcion, nombre, imagen, marca, proveedor, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili', { count: 'exact' })
+      .eq('estado_registro', 'existente')
+      .order('descripcion', { ascending: true })
+      .range(offset, offset + parseInt(limit) - 1);
+
+    if (search) {
+      query = query.or(`descripcion.ilike.%${search}%,nombre.ilike.%${search}%,marca.ilike.%${search}%`);
+    }
+
+    // Filtrar por tienda: productos de esa tienda (con o sin stock)
+    if (tienda === 'mundo_lib') {
+      query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
+    } else if (tienda === 'majoli') {
+      query = query.or('tienda_origen.eq.majoli,stock_majoli.gt.0');
+    } else if (tienda === 'lili') {
+      query = query.or('tienda_origen.eq.lili,stock_lili.gt.0');
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        totalPages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar stock de una ubicación específica
+app.patch('/api/inventario/:id/stock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ubicacion, cantidad } = req.body;
+
+    const ubicacionesValidas = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    if (!ubicacionesValidas.includes(ubicacion)) {
+      return res.status(400).json({ success: false, error: 'Ubicación inválida' });
+    }
+    if (cantidad === undefined || cantidad === null || parseInt(cantidad) < 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad inválida' });
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({ [ubicacion]: parseInt(cantidad) })
+      .eq('id', id)
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Trasladar unidades del depósito a una tienda
+app.post('/api/inventario/trasladar', async (req, res) => {
+  try {
+    const { producto_id, tienda_destino, cantidad } = req.body;
+
+    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
+    if (!tiendasValidas.includes(tienda_destino)) {
+      return res.status(400).json({ success: false, error: 'Tienda inválida' });
+    }
+    if (!cantidad || parseInt(cantidad) <= 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad inválida' });
+    }
+
+    const { data: producto, error: errorGet } = await supabase
+      .from('productos')
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .eq('id', producto_id)
+      .single();
+
+    if (errorGet) throw errorGet;
+
+    const cant = parseInt(cantidad);
+    if ((producto.stock_deposito || 0) < cant) {
+      return res.status(400).json({
+        success: false,
+        error: `Stock insuficiente en depósito. Disponible: ${producto.stock_deposito || 0}, Solicitado: ${cant}`
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({
+        stock_deposito: (producto.stock_deposito || 0) - cant,
+        [`stock_${tienda_destino}`]: (producto[`stock_${tienda_destino}`] || 0) + cant
+      })
+      .eq('id', producto_id)
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+      mensaje: `${cant} unidades trasladadas de depósito a ${tienda_destino}`
+    });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -493,6 +493,16 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - Verificar que `VITE_CLOUDINARY_CLOUD_NAME` y `VITE_CLOUDINARY_UPLOAD_PRESET` estén configurados
 - Verificar que el preset en Cloudinary esté en modo "unsigned"
 
+### "Los productos no aparecen en ninguna app" (2026-02-22):
+- **Causa:** El plan de prueba gratuito de Railway (30 días) expiró
+- **Síntoma:** Railway envía un email avisando que el trial expiró y el backend se apaga
+- **Solución aplicada:** Actualizar al plan Hobby de Railway ($5/mes) desde https://railway.app/account/billing
+- **Tiempo de recuperación:** 1-2 minutos después de pagar, el servidor vuelve a arrancar solo
+- **Nota:** Evaluar migración a Render (gratis) para evitar este costo mensual
+  - Render tiene capa gratuita con servidor que se "duerme" tras 15 min de inactividad
+  - Se puede evitar el sueño con UptimeRobot (gratuito) que pingea el servidor cada 5 min
+  - Migración estimada: ~30 minutos sin cambios en el código
+
 ---
 
 ## 📚 Recursos y Documentación
@@ -592,9 +602,360 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 
 ---
 
-**Última actualización:** 2026-01-26 (SESIÓN 7 - Deployment y Personalización Completados)
-**Rama actual al guardar:** master
+## 💰 SISTEMA DE REGISTRO FLEXIBLE CON PRECIOS (SESIÓN 9 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-28
+
+### 🎯 Objetivo
+Rediseñar el sistema de registro para soportar datos parciales y automatizar transiciones de estado basándose en la completitud de información, con enfoque en flexibilidad del flujo de trabajo real.
+
+### 📋 Contexto del Problema
+
+El sistema original requería que todos los datos fueran completados de una vez, pero el flujo de trabajo real es más flexible:
+- A veces solo tienen descripción
+- A veces tienen descripción + foto
+- A veces tienen descripción + foto + cantidad
+- A veces tienen descripción + precios + cantidad
+- El precio de venta es más importante que el precio de compra (se puede estimar del mercado)
+- La cantidad no siempre se ingresa al momento del registro
+
+### ✅ Cambios Implementados
+
+#### 1. **Campos de Precio en Formularios de Registro**
+
+**Agregados a todos los formularios:**
+- Precio de compra (precio_compra_unidad)
+- Precio de venta (precio_venta_unidad)
+- Cálculo de ganancia en tiempo real (monto + porcentaje)
+- Indicador visual de pérdida si venta < compra
+
+**Formularios modificados:**
+- FormularioRapido (registro individual)
+- FormularioLoteProveedor (registro por proveedor)
+- FormularioLoteMarca (registro por marca)
+
+**Componentes:**
+```
+apps/mundolib-app/src/pages/Registro.jsx
+apps/majoli-app/src/pages/Registro.jsx
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+```
+
+#### 2. **Simplificación de Formularios por Lote**
+
+**Eliminados campos redundantes:**
+- ❌ Campo "marca" en FormularioLoteProveedor (todos comparten proveedor)
+- ❌ Campo "proveedor" en FormularioLoteMarca (todos comparten marca)
+
+**Beneficio:** Menos campos = registro más rápido
+
+#### 3. **Validación Simplificada**
+
+**Solo DESCRIPCIÓN es obligatoria:**
+- ✅ Descripción - siempre requerida
+- ❌ Cantidad - opcional (puede ser 0 o vacía)
+- ❌ Imagen - opcional
+- ❌ Precios - opcionales (se pueden agregar después)
+
+#### 4. **Lógica de Estado Automático**
+
+**Reglas para pasar a "Completado":**
+- ✅ Tiene imagen
+- ✅ Tiene descripción
+- ✅ Tiene precio de compra > 0
+- ✅ Tiene precio de venta > 0
+- ❌ Cantidad NO es requerida
+
+**Si falta alguno de estos → queda en "Proceso"**
+
+**Backend actualizado:**
+```javascript
+// Endpoints modificados:
+POST /api/productos/rapido
+POST /api/productos/lote
+PUT /api/productos/:id/completar
+```
+
+#### 5. **Actualización Parcial de Productos**
+
+**Problema original:**
+- Endpoint /completar rechazaba si faltaban datos
+- No se podía guardar solo precio de compra o solo precio de venta
+- Bloqueaba el flujo de trabajo incremental
+
+**Solución implementada:**
+- Endpoint acepta datos parciales
+- Guarda cualquier campo proporcionado
+- Verifica completitud y cambia estado solo si tiene TODO
+- Mensaje adaptativo según resultado
+
+**Ejemplo de flujo:**
+1. Registro inicial: solo descripción → "Proceso"
+2. Primera actualización: agregar foto → guarda, sigue en "Proceso"
+3. Segunda actualización: agregar precio venta → guarda, sigue en "Proceso"
+4. Tercera actualización: agregar precio compra → guarda, **pasa a "Completado"**
+
+#### 6. **Filtro por Tienda con Productos Sin Stock**
+
+**Problema identificado:**
+- Productos sin cantidad no aparecían en ninguna tienda
+- Filtro solo mostraba productos con stock > 0
+- Productos de Majoli aparecían en Mundo Lib y viceversa
+
+**Solución Fase 1: Campo tienda_origen**
+```sql
+-- Backend ahora guarda tienda de origen en todos los endpoints
+tienda_origen: 'mundo_lib' | 'majoli' | 'lili'
+```
+
+**Solución Fase 2: Parámetro incluir_sin_stock**
+```javascript
+// Endpoint: GET /api/productos/estado/:estado
+// Nuevo parámetro: incluir_sin_stock=true/false
+
+if (incluir_sin_stock === 'true') {
+  // Página Registro: mostrar productos de la tienda (con o sin stock)
+  query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
+} else {
+  // Página Atención: solo productos con stock > 0
+  query = query.gt('stock_mundo_lib', 0);
+}
+```
+
+**Beneficios:**
+- ✅ Productos sin stock visibles en página Registro
+- ✅ Cada tienda ve solo sus productos
+- ✅ Página Atención sigue filtrando por disponibilidad
+- ✅ Backwards compatible con productos viejos
+
+#### 7. **Atención al Cliente Sin Filtro de Stock**
+
+**Cambio importante:**
+- Antes: Solo mostraba productos con stock > 0
+- Ahora: Muestra productos con imagen + descripción + precios (stock puede ser 0)
+
+**Razón:**
+- Permite mostrar productos en catálogo aunque no haya stock
+- Usuario de atención puede informar al cliente
+- Se puede tomar pedido anticipado
+
+**Archivos modificados:**
+```
+apps/mundolib-app/src/pages/Atencion.jsx
+apps/majoli-app/src/pages/Atencion.jsx
+```
+
+#### 8. **Cálculo de Ganancia en Tiempo Real**
+
+**Ubicaciones implementadas:**
+- FormularioRapido (registro individual)
+- FormularioLoteProveedor (registro por proveedor)
+- FormularioLoteMarca (registro por marca)
+
+**Características:**
+- Cálculo instantáneo al escribir precios
+- Muestra ganancia absoluta (Bs) y relativa (%)
+- Color verde = ganancia positiva
+- Color rojo = pérdida (precio venta < precio compra)
+- Alerta visual: "⚠️ Estás vendiendo con pérdida"
+- Compatible con dark mode
+
+**Ejemplo visual:**
+```
+┌─────────────────────────────────────────┐
+│  Ganancia por unidad    Porcentaje      │
+│     + Bs 1.50              60.0%        │
+└─────────────────────────────────────────┘
+    ✅ Verde = Ganancia
+
+┌─────────────────────────────────────────┐
+│  Ganancia por unidad    Porcentaje      │
+│     - Bs 0.50              -20.0%       │
+│  ⚠️ Estás vendiendo con pérdida         │
+└─────────────────────────────────────────┘
+    🔴 Rojo = Pérdida
+```
+
+### 📝 Archivos Modificados
+
+**Backend:**
+```
+backend/server.js
+- Endpoint POST /api/productos/rapido
+- Endpoint POST /api/productos/lote
+- Endpoint PUT /api/productos/:id/completar
+- Endpoint GET /api/productos/estado/:estado
+```
+
+**Frontend - Mundo Lib:**
+```
+apps/mundolib-app/src/pages/Registro.jsx
+apps/mundolib-app/src/pages/Atencion.jsx
+apps/mundolib-app/src/pages/FormularioCompleto.jsx
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+```
+
+**Frontend - Majoli:**
+```
+apps/majoli-app/src/pages/Registro.jsx
+apps/majoli-app/src/pages/Atencion.jsx
+apps/majoli-app/src/pages/FormularioCompleto.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+```
+
+### 🚀 Commits Realizados
+
+1. `Agregar campos de precio y cálculo de ganancia en formularios de registro`
+2. `Remover filtro de stock en página Registro`
+3. `Implementar filtro por tienda_origen para productos sin stock`
+4. `Agregar parámetro incluir_sin_stock para filtro flexible por tienda`
+5. `Corregir filtro de tienda para incluir productos con stock`
+6. `Actualizar validaciones de completar producto`
+7. `Permitir productos sin stock en Atención al Cliente`
+8. `Actualizar lógica de estado automático: requiere imagen`
+9. `Permitir actualización parcial de productos en proceso`
+
+### 💡 Beneficios
+
+- ✅ **Flujo de trabajo flexible**: Registrar con datos parciales y completar después
+- ✅ **Estado automático**: Producto pasa a completado cuando tiene todo necesario
+- ✅ **Cálculo de ganancia**: Ver rentabilidad antes de guardar
+- ✅ **Menos errores**: Solo descripción obligatoria reduce fricción
+- ✅ **Mejor aislamiento**: Cada tienda ve solo sus productos
+- ✅ **Backwards compatible**: Funciona con productos existentes sin tienda_origen
+- ✅ **Versatilidad**: Atención puede mostrar productos sin stock (para pedidos)
+
+### 🔍 Reglas de Negocio Finales
+
+**Para REGISTRO de producto:**
+- Obligatorio: Descripción
+- Opcional: Todo lo demás
+
+**Para pasar a COMPLETADO automáticamente:**
+- ✅ Imagen
+- ✅ Descripción
+- ✅ Precio de compra
+- ✅ Precio de venta
+- ❌ Cantidad (NO requerida)
+
+**Para aparecer en ATENCIÓN AL CLIENTE:**
+- ✅ Imagen
+- ✅ Descripción
+- ✅ Precio de compra
+- ✅ Precio de venta
+- ❌ Stock > 0 (NO requerido, puede ser 0)
+
+**Filtrado por tienda:**
+- Registro: Muestra productos con `tienda_origen = tienda` O `stock > 0 en tienda`
+- Atención: Muestra productos con `tienda_origen = tienda` O `stock > 0 en tienda`
+
+### 📊 Impacto en Flujo de Trabajo
+
+**Antes:**
+1. Registrar producto con TODOS los datos
+2. Si falta algo → error o no se guarda
+3. Difícil completar información después
+
+**Ahora:**
+1. Registrar con descripción solamente → Proceso
+2. Agregar foto cuando la tengan → Proceso
+3. Agregar precio venta (más común) → Proceso
+4. Agregar precio compra → **Completado automático** ✨
+5. Agregar cantidad cuando llegue el producto (opcional)
+
+**Resultado:** Flujo incremental que se ajusta a la realidad del negocio.
+
+---
+
+## 📦 SISTEMA DE INVENTARIO (SESIÓN 10 - ✅ COMPLETADO)
+
+### Fecha: 2026-03-11
+
+### Qué se construyó
+
+**Nueva vista Inventario** accesible desde el menú en las 3 apps.
+
+Muestra todos los productos en estado `existente` de la tienda actual en una **tabla con scroll horizontal**:
+
+```
+Producto  | Dep | ML | Maj | Lili | Tot | ↔
+Carpeta   |  20 |  5 |   3 |    0 |  28 | ↔
+Marcador  |   0 |  8 |   4 |    2 |  14 | ↔
+```
+
+- Cada celda de stock es un botón → toca para editar el número
+- Botón ↔ → traslada unidades del depósito a una tienda
+- Buscador en tiempo real por descripción/marca
+- Columna producto fija (sticky), resto con scroll horizontal
+- Filtrado por tienda: cada app ve solo sus productos
+
+### Base de datos
+
+```sql
+-- Columna agregada manualmente en Supabase:
+ALTER TABLE productos ADD COLUMN stock_deposito integer DEFAULT 0;
+```
+
+### Endpoints nuevos
+
+- `GET /api/inventario?tienda=mundo_lib&search=&page=1` → lista productos existentes de la tienda
+- `PATCH /api/inventario/:id/stock` → body: `{ ubicacion, cantidad }` — actualiza una celda
+- `POST /api/inventario/trasladar` → body: `{ producto_id, tienda_destino, cantidad }` — mueve del depósito a tienda
+
+### Selector de ubicación en registro
+
+Al registrar un producto (individual, por proveedor o por marca) ahora aparece un selector:
+
+```
+[ Tienda (ML) ]   [ Deposito ]
+```
+
+- **Tienda**: la cantidad va a `stock_mundo_lib` (o el campo de la tienda correspondiente)
+- **Deposito**: la cantidad va a `stock_deposito`
+
+En formularios de lote el selector aparece en el **Paso 1**, aplica a todos los productos del lote.
+
+### Flujo de trabajo con depósito
+
+1. Llega mercadería al depósito → registrar con ubicación **Deposito**
+2. Ver en Inventario → columna Dep muestra el stock
+3. Cuando llevan productos a la tienda → botón ↔ → elegir cantidad y tienda destino → Confirmar
+4. Stock se descuenta del depósito y suma en la tienda automáticamente
+
+### Archivos creados/modificados
+
+```
+backend/server.js                              → 3 endpoints nuevos + ubicacion en lote
+apps/*/src/pages/Inventario.jsx                → nueva vista (igual en las 3 apps)
+apps/*/src/App.jsx                             → import + render + botón activado
+apps/*/src/components/MenuHamburguesa.jsx      → quitado "Próximamente" de Inventario
+apps/*/src/pages/Registro.jsx                  → selector ubicacion en FormularioRapido
+apps/*/src/components/FormularioLoteProveedor  → selector ubicacion en Paso 1
+apps/*/src/components/FormularioLoteMarca      → selector ubicacion en Paso 1
+```
+
+### Pendiente (Fase 2)
+
+- Sistema de variantes (color, medida, peso, tamaño) con stock propio por variante
+- Tabla `variantes` en Supabase: `id, producto_id, tipo, valor, precio_compra, precio_venta, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili`
+
+---
+
+**Última actualización:** 2026-03-11
+**Rama actual al guardar:** dev
 **Cambios recientes:**
+- ✅ **SESIÓN 10:** Sistema de Inventario con stock por ubicación (ver sección abajo)
+- ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
+- ✅ Botones separados para cámara/galería en subida de imágenes (mejor compatibilidad Android)
+- ✅ Campo cantidad obligatorio en registro por lotes (previene productos sin stock)
+- ✅ Botón eliminar en productos existentes (dentro de modal Ver Detalles)
+- ✅ Cálculo de ganancia en tiempo real al editar precios en existentes
+- ✅ Todos los cambios aplicados a las 3 apps (mundolib, majoli, lili)
 - ✅ **SESIÓN 7:** Deployment completo de sistema multi-tienda a producción
 - ✅ Fix crítico: Variables de entorno Railway corregidas (SERVICE_ROLE_KEY tenía caracteres extra)
 - ✅ Backend development funcionando correctamente en Railway
@@ -608,6 +969,149 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
   - Lili: https://lili-app-ruddy.vercel.app
 - ✅ Todas las apps con variables de entorno configuradas
 - ✅ PWA funcional con iconos diferenciados en las 3 tiendas
+
+---
+
+## 🎨 MEJORAS UX Y VALIDACIONES (SESIÓN 8 - ✅ COMPLETADO)
+
+### Fecha: 2026-01-27
+
+### 🎯 Objetivo
+Mejorar la experiencia de usuario y agregar validaciones faltantes en el sistema multi-tienda.
+
+### ✅ Mejoras Implementadas
+
+#### 1. **Botones Separados para Subida de Imágenes**
+
+**Problema:**
+- En dispositivos Android diferentes (Poco F3 vs Redmi 13) el comportamiento del input de imagen era inconsistente
+- Poco F3: Mostraba "Cámara" y "Examinar"
+- Redmi 13: Mostraba solo "Fotos" y "Colecciones" (sin opción de cámara)
+- Problema causado por implementaciones diferentes del atributo `capture` en fabricantes
+
+**Solución:**
+- Dos botones separados en lugar de uno solo:
+  - **📷 Tomar Foto**: Con `capture="environment"` (activa cámara trasera)
+  - **🖼️ Desde Galería**: Sin `capture` (abre galería de fotos)
+- Diseño responsive en grid de 2 columnas
+- Colores diferenciados (azul para cámara, verde para galería)
+- Botón "🗑️ Quitar Imagen" cuando hay previsualización
+
+**Componente actualizado:**
+- `apps/mundolib-app/src/components/SelectorImagen.jsx`
+- `apps/majoli-app/src/components/SelectorImagen.jsx`
+- `apps/lili-app/src/components/SelectorImagen.jsx`
+
+#### 2. **Campo Cantidad Obligatorio en Registro por Lotes**
+
+**Problema:**
+- Al agregar productos por lote, el campo cantidad no era obligatorio
+- Se podían guardar productos con cantidad = 0
+- Productos con stock 0 no aparecían en la pestaña "En Proceso" (filtrada por stock > 0)
+- Usuario confundido: "guardaba pero no veía los productos"
+
+**Solución:**
+- Campo cantidad ahora es **obligatorio** con validación:
+  - Asterisco rojo (*) en el label
+  - Validación: cantidad debe ser > 0
+  - Mensaje de error si no cumple: "La cantidad es obligatoria y debe ser mayor a 0"
+  - Borde rojo en input cuando hay error
+- Previene guardar productos sin stock definido
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/majoli-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/lili-app/src/components/FormularioLoteProveedor.jsx`
+- `apps/mundolib-app/src/components/FormularioLoteMarca.jsx`
+- `apps/majoli-app/src/components/FormularioLoteMarca.jsx`
+- `apps/lili-app/src/components/FormularioLoteMarca.jsx`
+
+#### 3. **Botón Eliminar en Productos Existentes**
+
+**Problema:**
+- En la pestaña "Existente" no había forma de eliminar productos
+- Solo había opción de eliminar en "En Proceso"
+- Si un producto llegaba a Existentes, era difícil eliminarlo
+
+**Solución:**
+- Botón "🗑️ Eliminar" agregado dentro del modal "Ver Detalles"
+- No está en la vista principal (para evitar eliminaciones accidentales)
+- Requiere confirmación con diálogo nativo del navegador
+- Muestra estado de carga "⏳ Eliminando..."
+- Después de eliminar: cierra modal y recarga lista
+- Posicionado entre botones "Cerrar" y "Editar"
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/pages/VerEditarProducto.jsx`
+- `apps/majoli-app/src/pages/VerEditarProducto.jsx`
+- `apps/lili-app/src/pages/VerEditarProducto.jsx`
+
+#### 4. **Cálculo de Ganancia en Tiempo Real**
+
+**Problema:**
+- En "En Proceso", al editar precios se mostraba la ganancia al instante
+- En "Existente", la ganancia solo se mostraba con datos originales (no se actualizaba al editar)
+- Dificultaba verificar si los datos del producto eran correctos
+
+**Solución:**
+- Cálculo de ganancia ahora usa `formData` en lugar de `producto`
+- Se actualiza instantáneamente al modificar precio de compra o venta
+- Visual mejorado:
+  - Fondo verde + texto verde = Ganancia positiva
+  - Fondo rojo + texto rojo = Pérdida (venta menor que compra)
+  - Muestra monto absoluto (Bs X.XX) y porcentaje (XX.X%)
+  - Mensaje de alerta "⚠️ Estás vendiendo con pérdida" cuando aplica
+- Facilita validación de datos antes de guardar
+
+**Componentes actualizados:**
+- `apps/mundolib-app/src/pages/VerEditarProducto.jsx`
+- `apps/majoli-app/src/pages/VerEditarProducto.jsx`
+- `apps/lili-app/src/pages/VerEditarProducto.jsx`
+
+### 📝 Archivos Modificados
+
+**Componentes:**
+```
+apps/mundolib-app/src/components/SelectorImagen.jsx
+apps/majoli-app/src/components/SelectorImagen.jsx
+apps/lili-app/src/components/SelectorImagen.jsx
+
+apps/mundolib-app/src/components/FormularioLoteProveedor.jsx
+apps/majoli-app/src/components/FormularioLoteProveedor.jsx
+apps/lili-app/src/components/FormularioLoteProveedor.jsx
+
+apps/mundolib-app/src/components/FormularioLoteMarca.jsx
+apps/majoli-app/src/components/FormularioLoteMarca.jsx
+apps/lili-app/src/components/FormularioLoteMarca.jsx
+
+apps/mundolib-app/src/pages/VerEditarProducto.jsx
+apps/majoli-app/src/pages/VerEditarProducto.jsx
+apps/lili-app/src/pages/VerEditarProducto.jsx
+```
+
+### 🚀 Commits Realizados
+
+1. `Separar botones de cámara y galería para mejor compatibilidad Android`
+2. `Hacer campo cantidad obligatorio en formularios de registro por lote`
+3. `Agregar botón eliminar y cálculo de ganancia en tiempo real en productos existentes`
+
+### 💡 Beneficios
+
+- ✅ **Compatibilidad Android mejorada**: Funciona consistente en todos los dispositivos
+- ✅ **Menos errores de usuario**: Validación previene productos sin stock
+- ✅ **Gestión completa en Existentes**: Eliminar productos desde cualquier pestaña
+- ✅ **Verificación de datos mejorada**: Ver ganancia/pérdida al instante al editar precios
+- ✅ **UX consistente**: Todas las funcionalidades disponibles en todas las pestañas
+
+### 📊 Impacto en Tokens
+
+**Nota importante sobre costos:**
+- Con el sistema multi-tienda (3 apps), cada cambio requiere modificar 3 archivos
+- Consumo aproximado: 3x tokens vs sistema de una sola app
+- **Refactorización planificada**: Migrar a librería compartida de componentes
+  - Reducirá consumo de tokens en ~66% para cambios futuros
+  - Se implementará antes de crear nuevas vistas (Inventario, Compras, etc.)
+  - Inversión inicial de ~800-1,200 tokens, break-even en 3-4 cambios
 
 ---
 
@@ -1012,3 +1516,377 @@ apps/lili-app/public/icon-lili.svg
 - ✅ Campo nombre opcional en Completar Registro
 - ✅ Datos completos en tarjetas Completados (precios + ganancia + stock)
 - ✅ Botón "Verificar OK ✓" para aprobar productos antes de pasar a Existentes
+
+## 🛠️ HERRAMIENTAS CLI (Command Line Interface)
+
+### 📊 Estado de Instalación
+
+| CLI | Estado | Versión | Configuración |
+|-----|--------|---------|---------------|
+| **Railway CLI** | ✅ Instalado | 4.27.2 | ⏳ Pendiente vincular |
+| **Supabase CLI** | ⏳ Pendiente | v2.72.7 | ⏳ Pendiente instalar |
+| **Vercel CLI** | ✅ Instalado | 50.5.0 | ✅ Configurado |
+
+---
+
+## 🚂 RAILWAY CLI
+
+### ✅ Ya Instalado
+```bash
+npm install -g @railway/cli
+railway login  # Ya completado
+```
+
+### ⏳ Configuración Pendiente
+
+**1. Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+railway link
+# Selecciona: catalogo-productos
+```
+
+**2. Verificar vinculación:**
+```bash
+railway status
+```
+
+### 📚 Comandos Útiles
+
+#### Ver Variables de Entorno:
+```bash
+# Listar todas las variables
+railway variables
+
+# Ver valor de una variable específica
+railway variables get SUPABASE_SERVICE_ROLE_KEY
+```
+
+#### Configurar Variables:
+```bash
+# Agregar/actualizar variable
+railway variables set KEY=value
+
+# Ejemplo:
+railway variables set SUPABASE_URL=https://zpvtovhomaykvcowbtda.supabase.co
+```
+
+#### Ver Logs en Tiempo Real:
+```bash
+# Logs del servicio
+railway logs
+
+# Logs con follow (stream en vivo)
+railway logs --follow
+```
+
+#### Deploy y Status:
+```bash
+# Ver status del deployment
+railway status
+
+# Hacer deploy (desde código local)
+railway up
+
+# Ver servicios del proyecto
+railway service
+```
+
+#### Ejecutar Comandos en el Contenedor:
+```bash
+# Abrir shell en el contenedor
+railway shell
+
+# Ejecutar comando específico
+railway run node --version
+```
+
+### 💡 Casos de Uso en Este Proyecto
+
+**1. Verificar variables de entorno (sin ir al dashboard):**
+```bash
+railway variables | grep SUPABASE
+```
+
+**2. Ver logs cuando hay errores:**
+```bash
+railway logs --follow
+```
+
+**3. Cambiar variables rápidamente:**
+```bash
+railway variables set SUPABASE_SERVICE_ROLE_KEY=nueva_key
+```
+
+**4. Ver deployments:**
+```bash
+railway status
+```
+
+---
+
+## 🗄️ SUPABASE CLI
+
+### ⏳ Instalación Pendiente
+
+#### Método 1: Descarga Manual (Recomendado para Windows)
+
+**1. Descargar:**
+```
+https://github.com/supabase/cli/releases/download/v2.72.7/supabase_windows_amd64.tar.gz
+```
+
+**2. Extraer:**
+- Descomprimir el .tar.gz (usar 7-Zip o WinRAR)
+- Encontrarás el archivo `supabase.exe`
+
+**3. Instalar:**
+```powershell
+# Crear directorio (PowerShell como Admin)
+mkdir "C:\Program Files\supabase"
+
+# Mover el ejecutable
+move supabase.exe "C:\Program Files\supabase\"
+
+# Agregar al PATH
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\supabase", "Machine")
+```
+
+**4. Verificar:**
+```bash
+# Abrir nueva terminal
+supabase --version
+```
+
+#### Método 2: Con Scoop (Alternativo)
+
+```powershell
+# Instalar Scoop (si no lo tienes)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+# Instalar Supabase CLI
+scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+scoop install supabase
+```
+
+### 🔧 Configuración Inicial
+
+**1. Login:**
+```bash
+supabase login
+```
+
+**2. Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+supabase link --project-ref zpvtovhomaykvcowbtda
+```
+
+### 📚 Comandos Útiles
+
+#### Migraciones de Base de Datos:
+
+```bash
+# Ver status de migraciones
+supabase db diff
+
+# Aplicar migración
+supabase db push
+
+# Crear nueva migración
+supabase migration new nombre_migracion
+
+# Ver historial de migraciones
+supabase migration list
+```
+
+#### Queries SQL:
+
+```bash
+# Ejecutar query desde terminal
+supabase db query "SELECT * FROM productos LIMIT 5;"
+
+# Ejecutar archivo SQL
+supabase db execute -f database/migrations/001_agregar_multi_tienda.sql
+```
+
+#### Gestión de Datos:
+
+```bash
+# Resetear base de datos local
+supabase db reset
+
+# Seed de datos
+supabase db seed
+
+# Dump de base de datos
+supabase db dump -f backup.sql
+```
+
+#### Ver Estructura:
+
+```bash
+# Ver tablas
+supabase db list
+
+# Inspeccionar tabla
+supabase db inspect productos
+
+# Ver tipos (TypeScript)
+supabase gen types typescript
+```
+
+### 💡 Casos de Uso en Este Proyecto
+
+**1. Ejecutar migraciones:**
+```bash
+# Aplicar migración multi-tienda
+supabase db push database/migrations/001_agregar_multi_tienda.sql
+```
+
+**2. Verificar estructura de tablas:**
+```bash
+supabase db inspect productos
+```
+
+**3. Query rápida para debugging:**
+```bash
+supabase db query "SELECT id, descripcion, stock_mundo_lib, stock_majoli, stock_lili FROM productos LIMIT 10;"
+```
+
+**4. Backup de base de datos:**
+```bash
+supabase db dump -f backup_$(date +%Y%m%d).sql
+```
+
+---
+
+## 🎯 COMPARACIÓN: CLI vs Dashboard Web
+
+### Railway CLI vs Dashboard:
+
+| Tarea | Dashboard Web | Railway CLI |
+|-------|---------------|-------------|
+| Ver variables | 5 clicks | `railway variables` |
+| Cambiar variable | 6 clicks + redeploy | `railway variables set KEY=val` |
+| Ver logs | 4 clicks | `railway logs` |
+| Ver status | 3 clicks | `railway status` |
+
+**Ahorro de tiempo estimado:** 70-80%
+
+### Supabase CLI vs Dashboard:
+
+| Tarea | Dashboard Web | Supabase CLI |
+|-------|---------------|---------------|
+| Ejecutar query | SQL Editor + copiar/pegar | `supabase db query "SELECT..."` |
+| Aplicar migración | Subir archivo + ejecutar | `supabase db push archivo.sql` |
+| Ver estructura | Table Editor + navegar | `supabase db inspect tabla` |
+| Backup | Múltiples pasos | `supabase db dump -f backup.sql` |
+
+**Ahorro de tiempo estimado:** 60-70%
+
+---
+
+## 📝 Checklist de Configuración
+
+### Railway CLI:
+- [x] Instalado (v4.27.2)
+- [x] Login completado
+- [x] Proyecto vinculado (acceptable-miracle / development)
+- [x] Probado con `railway status`
+- [ ] Servicio vinculado (requiere nombre del servicio)
+
+### Supabase CLI:
+- [x] Descargado de GitHub (v2.72.7)
+- [x] Ejecutable en PATH (~/bin/supabase.exe)
+- [ ] Login completado (requiere access token)
+- [ ] Proyecto vinculado
+- [ ] Probado con `supabase db query`
+
+### Vercel CLI:
+- [x] Instalado (v50.5.0)
+- [x] Login completado
+- [x] Proyectos deployados
+- [x] Funcionando correctamente
+
+---
+
+## 🚀 Próximos Pasos - Completar Configuración
+
+### 1. Railway CLI - Vincular Servicio
+
+El proyecto ya está vinculado, pero falta vincular el servicio específico del backend.
+
+**Opción A - Vía Railway Dashboard:**
+1. Ve a https://railway.app/project/acceptable-miracle
+2. Anota el nombre exacto del servicio backend
+3. En la terminal ejecuta: `railway service <nombre-del-servicio>`
+
+**Opción B - Listar servicios interactivamente (desde tu terminal CMD/PowerShell):**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+railway service
+# Selecciona el servicio backend cuando aparezca el menú
+```
+
+**Verificar que funciona:**
+```bash
+railway variables        # Debería mostrar las 4 variables de Supabase
+railway logs --tail 50   # Debería mostrar logs del backend
+```
+
+### 2. Supabase CLI - Obtener Access Token
+
+El CLI ya está instalado en `~/bin/supabase.exe`, solo falta autenticación.
+
+**Obtener token:**
+1. Ve a https://supabase.com/dashboard/account/tokens
+2. Crea un nuevo token (nombre: "CLI Access")
+3. Copia el token generado
+
+**Configurar:**
+```bash
+export SUPABASE_ACCESS_TOKEN="tu_token_aqui"
+# O agrégalo permanentemente a ~/.bashrc:
+echo 'export SUPABASE_ACCESS_TOKEN="tu_token"' >> ~/.bashrc
+```
+
+**Vincular proyecto:**
+```bash
+cd C:\Users\Usuario\Desktop\catalogo-productos
+supabase link --project-ref zpvtovhomaykvcowbtda
+```
+
+**Probar:**
+```bash
+supabase db query "SELECT COUNT(*) FROM productos;"
+supabase db inspect productos
+```
+
+### 3. Verificación Final
+
+Una vez completados los pasos anteriores:
+```bash
+# Railway
+railway status
+railway variables
+railway logs --tail 20
+
+# Supabase
+supabase db query "SELECT tienda, COUNT(*) FROM productos GROUP BY tienda;"
+```
+
+---
+
+## 💡 Beneficios para Futuras Sesiones
+
+Con los CLIs configurados, en futuras sesiones podré:
+
+✅ Ver y modificar variables de entorno sin pedirte que vayas al dashboard
+✅ Ver logs en tiempo real para debugging
+✅ Ejecutar migraciones de base de datos directamente
+✅ Hacer queries SQL sin usar el SQL Editor
+✅ Verificar status de deployments instantáneamente
+✅ Ser ~75% más autónomo y eficiente
+
