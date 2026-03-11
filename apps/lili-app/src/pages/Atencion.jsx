@@ -40,9 +40,10 @@ function Atencion({ menuHamburguesa }) {
     setLoading(true);
     try {
       // Traer productos existentes Y completados en paralelo
+      // incluir_sin_stock=true para mostrar productos aunque no tengan cantidad
       const [responseExistente, responseCompletado] = await Promise.all([
-        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda }),
-        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda })
+        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' }),
+        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' })
       ]);
 
       // Combinar ambos arrays
@@ -51,17 +52,15 @@ function Atencion({ menuHamburguesa }) {
         ...(responseCompletado.data || [])
       ];
 
-      // Filtrar productos que tengan los datos mínimos necesarios para vender
+      // Filtrar productos que tengan los datos mínimos necesarios para atención
+      // Stock NO es obligatorio, puede ser 0
       productosData = productosData.filter(p => {
         const tieneImagen = p.imagen && p.imagen.trim() !== '';
         const tienePrecioVenta = p.precio_venta_unidad != null && p.precio_venta_unidad > 0;
         const tienePrecioCompra = p.precio_compra_unidad != null && p.precio_compra_unidad > 0;
         const tieneDescripcion = p.descripcion && p.descripcion.trim() !== '';
-        // Usar stock de la tienda actual
-        const stockTienda = p[APP_CONFIG.campo_stock];
-        const tieneStock = stockTienda != null && stockTienda > 0;
 
-        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion && tieneStock;
+        return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion;
       });
 
       // Filtrar solo faltantes si está activado
@@ -322,6 +321,24 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
   const tienePreciosMayor = producto.precios_por_mayor && producto.precios_por_mayor.length > 0;
   const yaReportado = producto.faltante_reportado === true;
 
+  const [variantes, setVariantes] = useState([]);
+  const [varianteSeleccionada, setVarianteSeleccionada] = useState(null);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/productos/${producto.id}/variantes`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.success && json.data.length > 0) {
+          setVariantes(json.data);
+        }
+      })
+      .catch(() => {});
+  }, [producto.id]);
+
+  const precioVenta = varianteSeleccionada?.precio_venta
+    ? parseFloat(varianteSeleccionada.precio_venta)
+    : producto.precio_venta_unidad;
+
   return (
     <div className={`rounded-lg border p-1 shadow relative ${
       yaReportado
@@ -360,11 +377,45 @@ function ProductoCard({ producto, onVerDetalles, onVerUsos, onReportarFaltante }
           {producto.marca || 'Sin marca'}
         </p>
 
+        {/* Selector de variantes */}
+        {variantes.length > 0 && (
+          <div className="mb-1">
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => setVarianteSeleccionada(null)}
+                className={`px-2 py-0.5 rounded text-sm font-semibold border transition-colors ${
+                  !varianteSeleccionada
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                }`}
+              >
+                General
+              </button>
+              {variantes.map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setVarianteSeleccionada(v)}
+                  className={`px-2 py-0.5 rounded text-sm font-semibold border transition-colors ${
+                    varianteSeleccionada?.id === v.id
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  {v.valor}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Precio súper compacto */}
         <div className="bg-green-50 dark:bg-green-900/30 rounded px-2 py-1 mb-1">
           <p className="text-center text-2xl font-bold text-green-700 dark:text-green-400">
-            Bs {producto.precio_venta_unidad?.toFixed(2) || '0.00'}
+            Bs {precioVenta?.toFixed(2) || '0.00'}
           </p>
+          {varianteSeleccionada?.precio_venta && (
+            <p className="text-center text-xs text-purple-600 dark:text-purple-400">{varianteSeleccionada.valor}</p>
+          )}
         </div>
 
         {/* Botón Ver Usos súper compacto */}

@@ -3,6 +3,8 @@ import { getProducto, updateProducto, deleteProducto } from '../utils/api';
 import SelectorImagen from '../components/SelectorImagen';
 import APP_CONFIG from '../config';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [producto, setProducto] = useState(null);
@@ -11,8 +13,17 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
+  // Variantes
+  const [variantes, setVariantes] = useState([]);
+  const [loadingVariantes, setLoadingVariantes] = useState(false);
+  const [varianteEditando, setVarianteEditando] = useState(null); // { id, tipo, valor, precio_compra, precio_venta }
+  const [formVariante, setFormVariante] = useState({ tipo: 'medida', valor: '', precio_compra: '', precio_venta: '' });
+  const [agregandoVariante, setAgregandoVariante] = useState(false);
+  const [guardandoVariante, setGuardandoVariante] = useState(false);
+
   useEffect(() => {
     cargarProducto();
+    cargarVariantes();
   }, [productoId]);
 
   const cargarProducto = async () => {
@@ -32,6 +43,90 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
     } catch (error) {
       alert('Error al cargar producto: ' + error.message);
       onCerrar();
+    }
+  };
+
+  const cargarVariantes = async () => {
+    setLoadingVariantes(true);
+    try {
+      const res = await fetch(`${API_URL}/productos/${productoId}/variantes`);
+      const json = await res.json();
+      if (json.success) setVariantes(json.data);
+    } catch (e) {
+      console.error('Error cargando variantes:', e);
+    } finally {
+      setLoadingVariantes(false);
+    }
+  };
+
+  const guardarNuevaVariante = async () => {
+    if (!formVariante.valor.trim()) return;
+    setGuardandoVariante(true);
+    try {
+      const res = await fetch(`${API_URL}/productos/${productoId}/variantes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: formVariante.tipo,
+          valor: formVariante.valor.trim(),
+          precio_compra: formVariante.precio_compra || null,
+          precio_venta: formVariante.precio_venta || null
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVariantes(prev => [...prev, json.data]);
+        setFormVariante(prev => ({ tipo: prev.tipo, valor: '', precio_compra: '', precio_venta: '' }));
+        setAgregandoVariante(false);
+      } else {
+        alert('Error: ' + json.error);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGuardandoVariante(false);
+    }
+  };
+
+  const guardarEdicionVariante = async () => {
+    setGuardandoVariante(true);
+    try {
+      const res = await fetch(`${API_URL}/variantes/${varianteEditando.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: varianteEditando.tipo,
+          valor: varianteEditando.valor,
+          precio_compra: varianteEditando.precio_compra || null,
+          precio_venta: varianteEditando.precio_venta || null
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVariantes(prev => prev.map(v => v.id === json.data.id ? json.data : v));
+        setVarianteEditando(null);
+      } else {
+        alert('Error: ' + json.error);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGuardandoVariante(false);
+    }
+  };
+
+  const eliminarVariante = async (varianteId) => {
+    if (!confirm('¿Eliminar esta variante?')) return;
+    try {
+      const res = await fetch(`${API_URL}/variantes/${varianteId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setVariantes(prev => prev.filter(v => v.id !== varianteId));
+      } else {
+        alert('Error: ' + json.error);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -515,6 +610,154 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
   )}
 </div>
         </form>
+
+        {/* Seccion Variantes */}
+        <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-6 mt-2">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-purple-800">Variantes ({variantes.length})</h3>
+            <button
+              onClick={() => {
+                const tipoExistente = variantes.length > 0 ? variantes[0].tipo : 'medida';
+                setFormVariante(prev => ({ ...prev, tipo: tipoExistente, valor: '', precio_compra: '', precio_venta: '' }));
+                setAgregandoVariante(true);
+                setVarianteEditando(null);
+              }}
+              className="px-3 py-1 bg-purple-600 text-white rounded-lg text-base font-semibold hover:bg-purple-700"
+            >
+              + Agregar
+            </button>
+          </div>
+
+          {loadingVariantes ? (
+            <p className="text-gray-500 text-base">Cargando...</p>
+          ) : variantes.length === 0 && !agregandoVariante ? (
+            <p className="text-gray-500 text-base italic">Sin variantes. Este producto no tiene tallas, colores ni medidas registradas.</p>
+          ) : (
+            <div className="space-y-2">
+              {variantes.map(v => (
+                varianteEditando?.id === v.id ? (
+                  <div key={v.id} className="bg-white border-2 border-purple-400 rounded-xl p-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={varianteEditando.tipo}
+                        onChange={e => setVarianteEditando(prev => ({ ...prev, tipo: e.target.value }))}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                      >
+                        <option value="medida">Medida</option>
+                        <option value="color">Color</option>
+                        <option value="tamaño">Tamaño</option>
+                        <option value="peso">Peso</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={varianteEditando.valor}
+                        onChange={e => setVarianteEditando(prev => ({ ...prev, valor: e.target.value }))}
+                        placeholder="Ej: A4, Rojo, Grande..."
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={varianteEditando.precio_compra || ''}
+                        onChange={e => setVarianteEditando(prev => ({ ...prev, precio_compra: e.target.value }))}
+                        placeholder="P. Compra (opcional)"
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={varianteEditando.precio_venta || ''}
+                        onChange={e => setVarianteEditando(prev => ({ ...prev, precio_venta: e.target.value }))}
+                        placeholder="P. Venta (opcional)"
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setVarianteEditando(null)} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 text-base">Cancelar</button>
+                      <button onClick={guardarEdicionVariante} disabled={guardandoVariante} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-base font-semibold disabled:opacity-50">
+                        {guardandoVariante ? 'Guardando...' : 'Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={v.id} className="bg-white border border-purple-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-semibold uppercase">{v.tipo}</span>
+                    <span className="font-bold text-gray-800 flex-1">{v.valor}</span>
+                    {v.precio_venta ? (
+                      <span className="text-green-700 font-semibold text-base">Bs {parseFloat(v.precio_venta).toFixed(2)}</span>
+                    ) : (
+                      <span className="text-gray-400 text-sm italic">precio padre</span>
+                    )}
+                    <button
+                      onClick={() => setVarianteEditando({ id: v.id, tipo: v.tipo, valor: v.valor, precio_compra: v.precio_compra || '', precio_venta: v.precio_venta || '' })}
+                      className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg text-base"
+                    >✏️</button>
+                    <button
+                      onClick={() => eliminarVariante(v.id)}
+                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg text-base"
+                    >🗑️</button>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+
+          {/* Form agregar nueva variante */}
+          {agregandoVariante && (
+            <div className="bg-white border-2 border-purple-400 rounded-xl p-3 space-y-2 mt-2">
+              <p className="font-semibold text-purple-700 text-base">Nueva variante</p>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={formVariante.tipo}
+                  onChange={e => setFormVariante(prev => ({ ...prev, tipo: e.target.value }))}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                >
+                  <option value="medida">Medida</option>
+                  <option value="color">Color</option>
+                  <option value="tamaño">Tamaño</option>
+                  <option value="peso">Peso</option>
+                </select>
+                <input
+                  type="text"
+                  value={formVariante.valor}
+                  onChange={e => setFormVariante(prev => ({ ...prev, valor: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && formVariante.valor.trim() && guardarNuevaVariante()}
+                  placeholder="Ej: A4, Rojo, Grande..."
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formVariante.precio_compra}
+                  onChange={e => setFormVariante(prev => ({ ...prev, precio_compra: e.target.value }))}
+                  placeholder="P. Compra (opcional)"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formVariante.precio_venta}
+                  onChange={e => setFormVariante(prev => ({ ...prev, precio_venta: e.target.value }))}
+                  placeholder="P. Venta (opcional)"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-base"
+                />
+              </div>
+              <p className="text-xs text-gray-500">Si no ingresas precio, se usa el precio del producto padre.</p>
+              <div className="flex gap-2">
+                <button onClick={() => { setAgregandoVariante(false); }} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-600 text-base">Cancelar</button>
+                <button onClick={guardarNuevaVariante} disabled={guardandoVariante || !formVariante.valor.trim()} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-base font-semibold disabled:opacity-50">
+                  {guardandoVariante ? 'Guardando...' : 'Agregar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
