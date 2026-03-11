@@ -493,6 +493,16 @@ Los tamaños están optimizados para **legibilidad en celular** y uso prolongado
 - Verificar que `VITE_CLOUDINARY_CLOUD_NAME` y `VITE_CLOUDINARY_UPLOAD_PRESET` estén configurados
 - Verificar que el preset en Cloudinary esté en modo "unsigned"
 
+### "Los productos no aparecen en ninguna app" (2026-02-22):
+- **Causa:** El plan de prueba gratuito de Railway (30 días) expiró
+- **Síntoma:** Railway envía un email avisando que el trial expiró y el backend se apaga
+- **Solución aplicada:** Actualizar al plan Hobby de Railway ($5/mes) desde https://railway.app/account/billing
+- **Tiempo de recuperación:** 1-2 minutos después de pagar, el servidor vuelve a arrancar solo
+- **Nota:** Evaluar migración a Render (gratis) para evitar este costo mensual
+  - Render tiene capa gratuita con servidor que se "duerme" tras 15 min de inactividad
+  - Se puede evitar el sueño con UptimeRobot (gratuito) que pingea el servidor cada 5 min
+  - Migración estimada: ~30 minutos sin cambios en el código
+
 ---
 
 ## 📚 Recursos y Documentación
@@ -862,9 +872,84 @@ apps/majoli-app/src/components/FormularioLoteMarca.jsx
 
 ---
 
-**Última actualización:** 2026-01-28 (SESIÓN 9 - Sistema de Registro Flexible con Precios)
+## 📦 SISTEMA DE INVENTARIO (SESIÓN 10 - ✅ COMPLETADO)
+
+### Fecha: 2026-03-11
+
+### Qué se construyó
+
+**Nueva vista Inventario** accesible desde el menú en las 3 apps.
+
+Muestra todos los productos en estado `existente` de la tienda actual en una **tabla con scroll horizontal**:
+
+```
+Producto  | Dep | ML | Maj | Lili | Tot | ↔
+Carpeta   |  20 |  5 |   3 |    0 |  28 | ↔
+Marcador  |   0 |  8 |   4 |    2 |  14 | ↔
+```
+
+- Cada celda de stock es un botón → toca para editar el número
+- Botón ↔ → traslada unidades del depósito a una tienda
+- Buscador en tiempo real por descripción/marca
+- Columna producto fija (sticky), resto con scroll horizontal
+- Filtrado por tienda: cada app ve solo sus productos
+
+### Base de datos
+
+```sql
+-- Columna agregada manualmente en Supabase:
+ALTER TABLE productos ADD COLUMN stock_deposito integer DEFAULT 0;
+```
+
+### Endpoints nuevos
+
+- `GET /api/inventario?tienda=mundo_lib&search=&page=1` → lista productos existentes de la tienda
+- `PATCH /api/inventario/:id/stock` → body: `{ ubicacion, cantidad }` — actualiza una celda
+- `POST /api/inventario/trasladar` → body: `{ producto_id, tienda_destino, cantidad }` — mueve del depósito a tienda
+
+### Selector de ubicación en registro
+
+Al registrar un producto (individual, por proveedor o por marca) ahora aparece un selector:
+
+```
+[ Tienda (ML) ]   [ Deposito ]
+```
+
+- **Tienda**: la cantidad va a `stock_mundo_lib` (o el campo de la tienda correspondiente)
+- **Deposito**: la cantidad va a `stock_deposito`
+
+En formularios de lote el selector aparece en el **Paso 1**, aplica a todos los productos del lote.
+
+### Flujo de trabajo con depósito
+
+1. Llega mercadería al depósito → registrar con ubicación **Deposito**
+2. Ver en Inventario → columna Dep muestra el stock
+3. Cuando llevan productos a la tienda → botón ↔ → elegir cantidad y tienda destino → Confirmar
+4. Stock se descuenta del depósito y suma en la tienda automáticamente
+
+### Archivos creados/modificados
+
+```
+backend/server.js                              → 3 endpoints nuevos + ubicacion en lote
+apps/*/src/pages/Inventario.jsx                → nueva vista (igual en las 3 apps)
+apps/*/src/App.jsx                             → import + render + botón activado
+apps/*/src/components/MenuHamburguesa.jsx      → quitado "Próximamente" de Inventario
+apps/*/src/pages/Registro.jsx                  → selector ubicacion en FormularioRapido
+apps/*/src/components/FormularioLoteProveedor  → selector ubicacion en Paso 1
+apps/*/src/components/FormularioLoteMarca      → selector ubicacion en Paso 1
+```
+
+### Pendiente (Fase 2)
+
+- Sistema de variantes (color, medida, peso, tamaño) con stock propio por variante
+- Tabla `variantes` en Supabase: `id, producto_id, tipo, valor, precio_compra, precio_venta, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili`
+
+---
+
+**Última actualización:** 2026-03-11
 **Rama actual al guardar:** dev
 **Cambios recientes:**
+- ✅ **SESIÓN 10:** Sistema de Inventario con stock por ubicación (ver sección abajo)
 - ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
 - ✅ Botones separados para cámara/galería en subida de imágenes (mejor compatibilidad Android)
 - ✅ Campo cantidad obligatorio en registro por lotes (previene productos sin stock)
