@@ -956,9 +956,81 @@ apps/*/src/components/FormularioLoteMarca      → selector ubicacion en Paso 1
 
 ---
 
+## 🎨 SISTEMA DE VARIANTES (SESIÓN 11 - ✅ COMPLETADO)
+
+### Fecha: 2026-03-11
+
+### Qué se construyó
+
+Sistema completo de variantes de producto (medida, color, tamaño, peso). Permite que un solo producto (ej: "Carpeta tapa dura") tenga sub-ítems con stock y precios propios (ej: A4, A5).
+
+### Base de datos (tabla ya creada en Supabase)
+
+```sql
+CREATE TABLE variantes (
+  id SERIAL PRIMARY KEY,
+  producto_id INTEGER REFERENCES productos(id) ON DELETE CASCADE,
+  tipo VARCHAR(50) NOT NULL,       -- 'color', 'medida', 'peso', 'tamaño'
+  valor VARCHAR(100) NOT NULL,     -- 'rojo', 'A4', '500g', 'grande'
+  precio_compra DECIMAL(10,2),     -- NULL = hereda del producto padre
+  precio_venta DECIMAL(10,2),      -- NULL = hereda del producto padre
+  stock_deposito INTEGER DEFAULT 0,
+  stock_mundo_lib INTEGER DEFAULT 0,
+  stock_majoli INTEGER DEFAULT 0,
+  stock_lili INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Endpoints nuevos (backend/server.js)
+
+```
+GET    /api/productos/:id/variantes         → lista variantes del producto
+POST   /api/productos/:id/variantes         → crear variante { tipo, valor, precio_compra?, precio_venta?, stocks? }
+PUT    /api/variantes/:id                   → editar tipo/valor/precios
+DELETE /api/variantes/:id                   → eliminar variante
+PATCH  /api/variantes/:id/stock             → body: { ubicacion, cantidad } — editar una celda de stock
+POST   /api/variantes/:id/trasladar         → body: { tienda_destino, cantidad } — mover deposito → tienda
+```
+
+### Frontend - 3 vistas modificadas
+
+**VerEditarProducto.jsx** (modal de producto):
+- Sección "Variantes" al final (fuera del `<form>`, dentro del modal)
+- Lista variantes existentes con tipo/valor/precio
+- Botón editar (pencil) → edición inline de tipo, valor, precio_compra, precio_venta
+- Botón eliminar → confirma y borra
+- Botón "+ Agregar" → formulario para nueva variante
+- Precios son opcionales — si no se ingresan, hereda del producto padre
+
+**Inventario.jsx** (tabla de stock):
+- Cada fila de producto tiene botón ▶ (expandir variantes)
+- Al hacer click: carga variantes del producto (lazy, solo cuando se expande)
+- Sub-filas con fondo morado claro muestran cada variante
+- Sub-filas tienen los mismos botones de stock y ↔ trasladar, pero operan sobre la variante
+- El ▶ se convierte en ▼ cuando está expandido
+
+**Atencion.jsx** (ProductoCard):
+- Cada card carga sus variantes al montarse (fetch por producto.id)
+- Si el producto tiene variantes, muestra botones selector: `[General] [A4] [A5]`
+- El precio mostrado cambia según la variante seleccionada (si tiene precio propio)
+- Si la variante no tiene precio, usa el precio del producto padre
+
+### Archivos modificados
+
+```
+backend/server.js                              → 6 endpoints nuevos de variantes
+apps/*/src/pages/VerEditarProducto.jsx         → sección de gestión de variantes
+apps/*/src/pages/Inventario.jsx                → filas expandibles con sub-filas por variante
+apps/*/src/pages/Atencion.jsx                  → selector de variantes en ProductoCard
+```
+
+---
+
 **Última actualización:** 2026-03-11
 **Rama actual al guardar:** dev
 **Cambios recientes:**
+- ✅ **SESIÓN 11:** Sistema de variantes completo (VerEditarProducto + Inventario + Atencion)
 - ✅ **SESIÓN 10:** Sistema de Inventario con stock por ubicación (ver sección abajo)
 - ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
 - ✅ Botones separados para cámara/galería en subida de imágenes (mejor compatibilidad Android)
