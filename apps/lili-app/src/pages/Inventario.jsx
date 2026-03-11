@@ -135,7 +135,7 @@ function Inventario({ menuHamburguesa }) {
       </div>
 
       {/* Tabla con scroll horizontal */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative z-0">
         <table className="w-full border-collapse bg-white dark:bg-gray-800 text-base min-w-[520px]">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
