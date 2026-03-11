@@ -1438,6 +1438,166 @@ app.post('/api/inventario/trasladar', async (req, res) => {
   }
 });
 
+// ==================== ENDPOINTS VARIANTES ====================
+
+// GET variantes de un producto
+app.get('/api/productos/:id/variantes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('variantes')
+      .select('*')
+      .eq('producto_id', id)
+      .order('tipo')
+      .order('valor');
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST crear variante
+app.post('/api/productos/:id/variantes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo, valor, precio_compra, precio_venta, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili } = req.body;
+
+    if (!tipo || !valor) {
+      return res.status(400).json({ success: false, error: 'tipo y valor son requeridos' });
+    }
+
+    const { data, error } = await supabase
+      .from('variantes')
+      .insert([{
+        producto_id: parseInt(id),
+        tipo,
+        valor,
+        precio_compra: precio_compra ? parseFloat(precio_compra) : null,
+        precio_venta: precio_venta ? parseFloat(precio_venta) : null,
+        stock_deposito: parseInt(stock_deposito) || 0,
+        stock_mundo_lib: parseInt(stock_mundo_lib) || 0,
+        stock_majoli: parseInt(stock_majoli) || 0,
+        stock_lili: parseInt(stock_lili) || 0
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT actualizar variante (tipo, valor, precios)
+app.put('/api/variantes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo, valor, precio_compra, precio_venta } = req.body;
+
+    const updateData = {};
+    if (tipo !== undefined) updateData.tipo = tipo;
+    if (valor !== undefined) updateData.valor = valor;
+    if (precio_compra !== undefined) updateData.precio_compra = precio_compra ? parseFloat(precio_compra) : null;
+    if (precio_venta !== undefined) updateData.precio_venta = precio_venta ? parseFloat(precio_venta) : null;
+
+    const { data, error } = await supabase
+      .from('variantes')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE variante
+app.delete('/api/variantes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from('variantes').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PATCH stock de una variante
+app.patch('/api/variantes/:id/stock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ubicacion, cantidad } = req.body;
+
+    const ubicacionesValidas = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    if (!ubicacionesValidas.includes(ubicacion)) {
+      return res.status(400).json({ success: false, error: 'Ubicacion invalida' });
+    }
+    if (parseInt(cantidad) < 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad no puede ser negativa' });
+    }
+
+    const { data, error } = await supabase
+      .from('variantes')
+      .update({ [ubicacion]: parseInt(cantidad) })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST trasladar deposito → tienda en variante
+app.post('/api/variantes/:id/trasladar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tienda_destino, cantidad } = req.body;
+
+    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
+    if (!tiendasValidas.includes(tienda_destino)) {
+      return res.status(400).json({ success: false, error: 'Tienda invalida' });
+    }
+    if (!cantidad || parseInt(cantidad) <= 0) {
+      return res.status(400).json({ success: false, error: 'Cantidad invalida' });
+    }
+
+    const { data: variante, error: errorGet } = await supabase
+      .from('variantes')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (errorGet) throw errorGet;
+
+    const cant = parseInt(cantidad);
+    if ((variante.stock_deposito || 0) < cant) {
+      return res.status(400).json({
+        success: false,
+        error: `Stock insuficiente en deposito. Disponible: ${variante.stock_deposito || 0}`
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('variantes')
+      .update({
+        stock_deposito: (variante.stock_deposito || 0) - cant,
+        [`stock_${tienda_destino}`]: (variante[`stock_${tienda_destino}`] || 0) + cant
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 20. Endpoint de prueba
 app.get('/', (req, res) => {
   res.json({

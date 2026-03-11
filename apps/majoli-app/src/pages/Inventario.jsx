@@ -15,9 +15,13 @@ function Inventario({ menuHamburguesa }) {
   const [guardando, setGuardando] = useState(false);
 
   // Modal trasladar
-  const [modalTrasladar, setModalTrasladar] = useState(null); // { producto }
+  const [modalTrasladar, setModalTrasladar] = useState(null); // { producto, varianteId? }
   const [traslado, setTraslado] = useState({ tienda: 'mundo_lib', cantidad: '' });
   const [trasladando, setTrasladando] = useState(false);
+
+  // Variantes
+  const [expandidos, setExpandidos] = useState(new Set());
+  const [variantesPorProducto, setVariantesPorProducto] = useState({}); // { productoId: { data: [], loading: false } }
 
   const searchTimeout = useRef(null);
 
@@ -58,15 +62,22 @@ function Inventario({ menuHamburguesa }) {
     if (nuevoStock === '' || parseInt(nuevoStock) < 0) return;
     setGuardando(true);
     try {
-      const res = await fetch(`${API_URL}/inventario/${modalStock.producto.id}/stock`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ubicacion: modalStock.ubicacion, cantidad: parseInt(nuevoStock) })
-      });
-      const json = await res.json();
-      if (json.success) {
-        setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
-        setModalStock(null);
+      if (modalStock.varianteId) {
+        // Editar stock de una variante
+        const json = await guardarStockVariante(modalStock.varianteId, modalStock.productoId, modalStock.ubicacion, nuevoStock);
+        if (json.success) setModalStock(null);
+      } else {
+        // Editar stock del producto base
+        const res = await fetch(`${API_URL}/inventario/${modalStock.producto.id}/stock`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ubicacion: modalStock.ubicacion, cantidad: parseInt(nuevoStock) })
+        });
+        const json = await res.json();
+        if (json.success) {
+          setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
+          setModalStock(null);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -80,22 +91,47 @@ function Inventario({ menuHamburguesa }) {
     if (!cant || cant <= 0) return;
     setTrasladando(true);
     try {
-      const res = await fetch(`${API_URL}/inventario/trasladar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          producto_id: modalTrasladar.producto.id,
-          tienda_destino: traslado.tienda,
-          cantidad: cant
-        })
-      });
-      const json = await res.json();
-      if (json.success) {
-        setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
-        setModalTrasladar(null);
-        setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+      if (modalTrasladar.varianteId) {
+        // Trasladar variante
+        const res = await fetch(`${API_URL}/variantes/${modalTrasladar.varianteId}/trasladar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tienda_destino: traslado.tienda, cantidad: cant })
+        });
+        const json = await res.json();
+        if (json.success) {
+          const productoId = modalTrasladar.productoId;
+          setVariantesPorProducto(prev => ({
+            ...prev,
+            [productoId]: {
+              ...prev[productoId],
+              data: prev[productoId].data.map(v => v.id === json.data.id ? json.data : v)
+            }
+          }));
+          setModalTrasladar(null);
+          setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+        } else {
+          alert(json.error);
+        }
       } else {
-        alert(json.error);
+        // Trasladar producto base
+        const res = await fetch(`${API_URL}/inventario/trasladar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            producto_id: modalTrasladar.producto.id,
+            tienda_destino: traslado.tienda,
+            cantidad: cant
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
+          setModalTrasladar(null);
+          setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+        } else {
+          alert(json.error);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -106,6 +142,48 @@ function Inventario({ menuHamburguesa }) {
 
   const totalStock = (p) =>
     (p.stock_deposito || 0) + (p.stock_mundo_lib || 0) + (p.stock_majoli || 0) + (p.stock_lili || 0);
+
+  const toggleExpandir = async (productoId) => {
+    const nuevosExpandidos = new Set(expandidos);
+    if (nuevosExpandidos.has(productoId)) {
+      nuevosExpandidos.delete(productoId);
+    } else {
+      nuevosExpandidos.add(productoId);
+      if (!variantesPorProducto[productoId]) {
+        setVariantesPorProducto(prev => ({ ...prev, [productoId]: { data: [], loading: true } }));
+        try {
+          const res = await fetch(`${API_URL}/productos/${productoId}/variantes`);
+          const json = await res.json();
+          setVariantesPorProducto(prev => ({
+            ...prev,
+            [productoId]: { data: json.success ? json.data : [], loading: false }
+          }));
+        } catch (e) {
+          setVariantesPorProducto(prev => ({ ...prev, [productoId]: { data: [], loading: false } }));
+        }
+      }
+    }
+    setExpandidos(nuevosExpandidos);
+  };
+
+  const guardarStockVariante = async (varianteId, productoId, ubicacion, cantidad) => {
+    const res = await fetch(`${API_URL}/variantes/${varianteId}/stock`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ubicacion, cantidad: parseInt(cantidad) })
+    });
+    const json = await res.json();
+    if (json.success) {
+      setVariantesPorProducto(prev => ({
+        ...prev,
+        [productoId]: {
+          ...prev[productoId],
+          data: prev[productoId].data.map(v => v.id === json.data.id ? json.data : v)
+        }
+      }));
+    }
+    return json;
+  };
 
   const stockTiendaDestino = modalTrasladar
     ? (modalTrasladar.producto[`stock_${traslado.tienda}`] || 0)
@@ -164,15 +242,30 @@ function Inventario({ menuHamburguesa }) {
                 </td>
               </tr>
             ) : (
-              productos.map((p, i) => {
+              productos.flatMap((p, i) => {
                 const rowBg = i % 2 === 0
                   ? 'bg-white dark:bg-gray-800'
                   : 'bg-gray-50 dark:bg-gray-850';
-                return (
+                const estaExpandido = expandidos.has(p.id);
+                const variantesInfo = variantesPorProducto[p.id];
+                const tieneVariantes = variantesInfo && variantesInfo.data.length > 0;
+
+                const filaProducto = (
                   <tr key={p.id} className={`border-b border-gray-100 dark:border-gray-700 ${rowBg}`}>
                     {/* Producto - columna pegada */}
                     <td className={`sticky left-0 px-3 py-2 z-10 ${rowBg}`}>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleExpandir(p.id)}
+                          className={`w-6 h-6 flex-shrink-0 rounded text-sm font-bold transition-colors ${
+                            estaExpandido
+                              ? 'bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900/40'
+                          }`}
+                          title="Ver/ocultar variantes"
+                        >
+                          {variantesInfo?.loading ? '⟳' : estaExpandido ? '▼' : '▶'}
+                        </button>
                         {p.imagen ? (
                           <img src={p.imagen} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
                         ) : (
@@ -181,11 +274,14 @@ function Inventario({ menuHamburguesa }) {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[130px]">
+                          <div className="font-semibold text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[110px]">
                             {p.descripcion}
                           </div>
                           {p.marca && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[130px]">{p.marca}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[110px]">{p.marca}</div>
+                          )}
+                          {tieneVariantes && (
+                            <div className="text-xs text-purple-600 dark:text-purple-400">{variantesInfo.data.length} variantes</div>
                           )}
                         </div>
                       </div>
@@ -251,6 +347,70 @@ function Inventario({ menuHamburguesa }) {
                     </td>
                   </tr>
                 );
+
+                // Filas de variantes (si está expandido)
+                const filasVariantes = estaExpandido && variantesInfo ? (
+                  variantesInfo.loading ? [
+                    <tr key={`${p.id}-loading`} className="bg-purple-50 dark:bg-purple-900/10">
+                      <td colSpan={7} className="px-6 py-2 text-purple-500 text-sm italic">Cargando variantes...</td>
+                    </tr>
+                  ] : variantesInfo.data.length === 0 ? [
+                    <tr key={`${p.id}-empty`} className="bg-purple-50 dark:bg-purple-900/10">
+                      <td colSpan={7} className="px-6 py-2 text-gray-400 text-sm italic">Sin variantes registradas</td>
+                    </tr>
+                  ] : variantesInfo.data.map(v => (
+                    <tr key={`v-${v.id}`} className="bg-purple-50 dark:bg-purple-900/10 border-b border-purple-100 dark:border-purple-900/30">
+                      <td className="sticky left-0 bg-purple-50 dark:bg-purple-900/10 px-3 py-1.5 z-10">
+                        <div className="flex items-center gap-2 pl-8">
+                          <span className="text-xs bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold uppercase">{v.tipo}</span>
+                          <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{v.valor}</span>
+                          {v.precio_venta && (
+                            <span className="text-green-600 dark:text-green-400 text-xs">Bs {parseFloat(v.precio_venta).toFixed(2)}</span>
+                          )}
+                        </div>
+                      </td>
+                      {['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'].map((campo, ci) => {
+                        const colores = [
+                          'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100',
+                          'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100',
+                          'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100',
+                          'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-100'
+                        ];
+                        const labels = ['Deposito', 'Mundo Lib', 'Majoli', 'Lili'];
+                        return (
+                          <td key={campo} className="px-1 py-1.5 text-center">
+                            <button
+                              onClick={() => {
+                                setModalStock({ producto: { ...v, descripcion: `${p.descripcion} - ${v.valor}` }, ubicacion: campo, label: labels[ci], varianteId: v.id, productoId: p.id });
+                                setNuevoStock(String(v[campo] ?? 0));
+                              }}
+                              className={`w-11 h-8 rounded-lg font-bold text-sm ${colores[ci]} transition-colors`}
+                            >
+                              {v[campo] ?? 0}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className="px-1 py-1.5 text-center text-sm font-bold text-purple-700 dark:text-purple-300">
+                        {totalStock(v)}
+                      </td>
+                      <td className="px-1 py-1.5 text-center">
+                        <button
+                          onClick={() => {
+                            setModalTrasladar({ producto: { ...v, descripcion: `${p.descripcion} - ${v.valor}` }, varianteId: v.id, productoId: p.id });
+                            setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+                          }}
+                          className="w-9 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 transition-colors text-sm font-bold"
+                          title="Trasladar deposito a tienda"
+                        >
+                          ↔
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : [];
+
+                return [filaProducto, ...filasVariantes];
               })
             )}
           </tbody>
