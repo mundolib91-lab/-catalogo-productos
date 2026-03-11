@@ -1315,7 +1315,7 @@ app.get('/api/transferencias', async (req, res) => {
 // Obtener todos los productos existentes para inventario
 app.get('/api/inventario', async (req, res) => {
   try {
-    const { search = '', page = 1, limit = 50 } = req.query;
+    const { search = '', page = 1, limit = 50, tienda = null } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let query = supabase
@@ -1327,6 +1327,15 @@ app.get('/api/inventario', async (req, res) => {
 
     if (search) {
       query = query.or(`descripcion.ilike.%${search}%,nombre.ilike.%${search}%,marca.ilike.%${search}%`);
+    }
+
+    // Filtrar por tienda: productos de esa tienda (con o sin stock)
+    if (tienda === 'mundo_lib') {
+      query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
+    } else if (tienda === 'majoli') {
+      query = query.or('tienda_origen.eq.majoli,stock_majoli.gt.0');
+    } else if (tienda === 'lili') {
+      query = query.or('tienda_origen.eq.lili,stock_lili.gt.0');
     }
 
     const { data, error, count } = await query;

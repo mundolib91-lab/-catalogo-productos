@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import APP_CONFIG from '../config';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -23,7 +24,7 @@ function Inventario({ menuHamburguesa }) {
   const cargarProductos = async (pagina = 1, busqueda = '') => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ page: pagina, limit: 50, search: busqueda });
+      const params = new URLSearchParams({ page: pagina, limit: 50, search: busqueda, tienda: APP_CONFIG.tienda });
       const res = await fetch(`${API_URL}/inventario?${params}`);
       const json = await res.json();
       if (json.success) {
