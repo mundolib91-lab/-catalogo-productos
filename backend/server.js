@@ -415,41 +415,39 @@ app.get('/api/reportes/stock-bajo', async (req, res) => {
 // 8. Obtener productos por estado de registro (para las pestañas)
 app.get('/api/productos/estado/:estado', async (req, res) => {
   try {
-    const { estado } = req.params; // proceso, completado, existente
-    const { page = 1, limit = 3000, search = '', tienda = null, incluir_sin_stock = 'false' } = req.query;
-    const offset = (page - 1) * limit;
-    const incluirSinStock = incluir_sin_stock === 'true';
+    const { estado } = req.params;
+    const { page = 1, search = '', tienda = null } = req.query;
+    const PAGE_SIZE = 1000; // límite real de Supabase free tier
+    const offset = (page - 1) * PAGE_SIZE;
 
-    let query = supabase
-      .from('productos')
-      .select('*', { count: 'exact' })
-      .eq('estado_registro', estado)
+    const applyFiltros = (q) => {
+      q = q.eq('estado_registro', estado);
+      if (search) q = q.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
+      if (tienda) q = q.eq('tienda_origen', tienda);
+      return q;
+    };
+
+    // Consulta de conteo real (sin límite de filas)
+    let countQuery = applyFiltros(supabase.from('productos').select('*', { count: 'exact', head: true }));
+
+    // Consulta de datos (limitada a 1000 por Supabase)
+    let dataQuery = applyFiltros(supabase.from('productos').select('*'))
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + PAGE_SIZE - 1);
 
-    // Búsqueda
-    if (search) {
-      query = query.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
-    }
+    const [{ count, error: countError }, { data, error: dataError }] = await Promise.all([countQuery, dataQuery]);
 
-    // Filtrar por tienda
-    if (tienda) {
-      // Registro y Atención: solo productos creados por esa tienda
-      query = query.eq('tienda_origen', tienda);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) throw error;
+    if (countError) throw countError;
+    if (dataError) throw dataError;
 
     res.json({
       success: true,
       data,
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit),
+        limit: PAGE_SIZE,
         total: count,
-        totalPages: Math.ceil(count / limit)
+        totalPages: Math.ceil(count / PAGE_SIZE)
       }
     });
   } catch (error) {
