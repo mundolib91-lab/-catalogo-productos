@@ -420,25 +420,28 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
     const PAGE_SIZE = 1000; // límite real de Supabase free tier
     const offset = (page - 1) * PAGE_SIZE;
 
-    const applyFiltros = (q) => {
-      q = q.eq('estado_registro', estado);
-      if (search) q = q.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
-      if (tienda) q = q.eq('tienda_origen', tienda);
-      return q;
-    };
-
-    // Consulta de conteo real (sin límite de filas)
-    let countQuery = applyFiltros(supabase.from('productos').select('*', { count: 'exact', head: true }));
-
-    // Consulta de datos (limitada a 1000 por Supabase)
-    let dataQuery = applyFiltros(supabase.from('productos').select('*'))
+    // Conteo real via función SQL (evita el límite de 1000 de Supabase free tier)
+    let dataQuery = supabase.from('productos').select('*')
+      .eq('estado_registro', estado)
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
 
-    const [{ count, error: countError }, { data, error: dataError }] = await Promise.all([countQuery, dataQuery]);
+    if (search) dataQuery = dataQuery.or(`nombre.ilike.%${search}%,descripcion.ilike.%${search}%,nombre_producto.ilike.%${search}%`);
+    if (tienda) dataQuery = dataQuery.eq('tienda_origen', tienda);
+
+    const [{ data: totalData, error: countError }, { data, error: dataError }] = await Promise.all([
+      supabase.rpc('contar_productos_estado', {
+        p_estado: estado,
+        p_tienda: tienda || null,
+        p_search: search || null
+      }),
+      dataQuery
+    ]);
 
     if (countError) throw countError;
     if (dataError) throw dataError;
+
+    const count = totalData;
 
     res.json({
       success: true,
