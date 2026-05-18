@@ -434,26 +434,8 @@ app.get('/api/productos/estado/:estado', async (req, res) => {
 
     // Filtrar por tienda
     if (tienda) {
-      if (incluirSinStock) {
-        // Para Registro: mostrar productos de la tienda (con o sin stock)
-        // Incluir productos donde: tienda_origen = tienda O stock > 0 en esa tienda
-        if (tienda === 'mundo_lib') {
-          query = query.or('tienda_origen.eq.mundo_lib,stock_mundo_lib.gt.0');
-        } else if (tienda === 'majoli') {
-          query = query.or('tienda_origen.eq.majoli,stock_majoli.gt.0');
-        } else if (tienda === 'lili') {
-          query = query.or('tienda_origen.eq.lili,stock_lili.gt.0');
-        }
-      } else {
-        // Para Atención: solo productos con stock > 0
-        if (tienda === 'mundo_lib') {
-          query = query.gt('stock_mundo_lib', 0);
-        } else if (tienda === 'majoli') {
-          query = query.gt('stock_majoli', 0);
-        } else if (tienda === 'lili') {
-          query = query.gt('stock_lili', 0);
-        }
-      }
+      // Registro y Atención: solo productos creados por esa tienda
+      query = query.eq('tienda_origen', tienda);
     }
 
     const { data, error, count } = await query;
