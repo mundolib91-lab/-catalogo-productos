@@ -31,6 +31,7 @@ function Registro({ menuHamburguesa }) {
   const [filtroOrden, setFiltroOrden] = useState('recientes'); // 'recientes' o 'antiguos'
   const [proveedores, setProveedores] = useState([]);
   const [marcas, setMarcas] = useState([]);
+  const [totalProductos, setTotalProductos] = useState(0);
 
   // Cargar productos según pestaña activa
   useEffect(() => {
@@ -53,6 +54,7 @@ function Registro({ menuHamburguesa }) {
       });
 
       let productosData = response.data || [];
+      setTotalProductos(response.pagination?.total ?? productosData.length);
 
       // Aplicar filtro por proveedor
       if (filtroProveedor && filtroProveedor !== '') {
@@ -305,7 +307,10 @@ function Registro({ menuHamburguesa }) {
           {!loading && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Mostrando <span className="font-bold text-gray-800 dark:text-white">{productos.length}</span> producto{productos.length !== 1 ? 's' : ''}
+                {(filtroProveedor || filtroMarca)
+                  ? <>Mostrando <span className="font-bold text-gray-800 dark:text-white">{productos.length}</span> de <span className="font-bold text-gray-800 dark:text-white">{totalProductos}</span> producto{totalProductos !== 1 ? 's' : ''}</>
+                  : <>{totalProductos} producto{totalProductos !== 1 ? 's' : ''}</>
+                }
                 {filtroProveedor && <span> • Proveedor: <span className="font-semibold">{filtroProveedor}</span></span>}
                 {filtroMarca && <span> • Marca: <span className="font-semibold">{filtroMarca}</span></span>}
               </p>
