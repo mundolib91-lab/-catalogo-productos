@@ -956,6 +956,59 @@ apps/*/src/components/FormularioLoteMarca      → selector ubicacion en Paso 1
 
 ---
 
+## 🚂 MIGRACIÓN RAILWAY → RENDER (SESIÓN 12 - ✅ COMPLETADO)
+
+### Fecha: 2026-05-10
+
+### Motivo
+Railway cobra $5/mes por el plan Hobby. Cada mes llega el cobro y el backend se apaga si no se paga. Se decidió migrar a Render que tiene capa gratuita permanente.
+
+### Stack nuevo
+- **Antes:** Backend en Railway ($5/mes)
+- **Ahora:** Backend en Render ($0/mes) + UptimeRobot ($0/mes)
+
+### URLs nuevas
+- **Backend producción:** https://catalogo-productos-backend.onrender.com/api
+- Railway ya no se usa para el backend
+
+### Limitación de Render gratuito
+- El servidor se "duerme" tras 15 min sin tráfico
+- **Solución:** UptimeRobot pingea el backend cada 5 minutos → servidor siempre despierto
+- URL que pingea: `https://catalogo-productos-backend.onrender.com/api/productos/proveedores`
+
+### Configuración en Render
+- **Servicio:** Web Service
+- **Root Directory:** `backend`
+- **Build Command:** `npm install`
+- **Start Command:** `node server.js`
+- **Instance Type:** Free
+- **Variables de entorno:**
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `PORT=10000`
+
+### UptimeRobot
+- Cuenta gratuita en https://uptimerobot.com
+- Monitor: `Catalogo Backend`
+- Tipo: HTTP(s)
+- Intervalo: 5 minutos
+- URL monitoreada: `https://catalogo-productos-backend.onrender.com/api/productos/proveedores`
+
+### Archivos modificados
+```
+apps/mundolib-app/.env   → VITE_API_URL apunta a Render
+apps/majoli-app/.env     → VITE_API_URL apunta a Render
+apps/lili-app/.env       → VITE_API_URL apunta a Render
+```
+
+### Variables Vercel actualizadas
+Las 3 apps en Vercel tienen `VITE_API_URL` actualizada a la URL de Render y fueron redespleguadas.
+
+### Sin cambios de código
+El backend `server.js` no requirió ningún cambio — solo cambió dónde se despliega.
+
+---
+
 ## 🎨 SISTEMA DE VARIANTES (SESIÓN 11 - ✅ COMPLETADO)
 
 ### Fecha: 2026-03-11
@@ -1027,9 +1080,10 @@ apps/*/src/pages/Atencion.jsx                  → selector de variantes en Prod
 
 ---
 
-**Última actualización:** 2026-03-11
-**Rama actual al guardar:** dev
+**Última actualización:** 2026-05-18
+**Rama actual al guardar:** master
 **Cambios recientes:**
+- ✅ **SESIÓN 12:** Migración de Railway a Render (ver sección abajo)
 - ✅ **SESIÓN 11:** Sistema de variantes completo (VerEditarProducto + Inventario + Atencion)
 - ✅ **SESIÓN 10:** Sistema de Inventario con stock por ubicación (ver sección abajo)
 - ✅ **SESIÓN 8:** Mejoras de compatibilidad y experiencia de usuario
@@ -1971,4 +2025,94 @@ Con los CLIs configurados, en futuras sesiones podré:
 ✅ Hacer queries SQL sin usar el SQL Editor
 ✅ Verificar status de deployments instantáneamente
 ✅ Ser ~75% más autónomo y eficiente
+
+---
+
+## 🔧 FIX PRODUCTOS NO VISIBLES Y CONTEO REAL (SESIÓN 13 - ✅ COMPLETADO)
+
+### Fecha: 2026-05-18
+
+### Problemas identificados
+
+1. **Pestañas Completados y Existentes mostraban solo 20 productos** — el límite por defecto en el backend era `limit = 20` y el frontend nunca lo sobreescribía.
+2. **Algunos productos no aparecían en Majoli** — consecuencia del punto anterior (los productos #21 en adelante no cargaban).
+3. **Filtro de tienda demasiado amplio** — la condición `tienda_origen = 'majoli' OR stock_majoli > 0` incluía productos de otras tiendas que tenían stock en Majoli, inflando el conteo a ~1589 cuando en realidad eran productos de todas las tiendas.
+4. **Contador mostraba el límite de carga en vez del total real** — primero mostraba 20, luego 500, luego 1000 en lugar del número real de productos.
+
+### Fixes aplicados
+
+#### 1. Límite de productos por página (`backend/server.js`)
+- Subido de `20` → `1000` (límite real de Supabase free tier)
+- Supabase free tier tiene `max_rows = 1000` hardcodeado; pedir más no sirve
+
+#### 2. Filtro de tienda simplificado (`backend/server.js`)
+- **Antes:** `tienda_origen = 'majoli' OR stock_majoli > 0` → mostraba productos de otras tiendas
+- **Ahora:** `tienda_origen = 'majoli'` → cada app ve solo los productos que ella creó
+- Aplica tanto a Registro como a Atención al Cliente
+
+#### 3. Conteo real con función SQL (`backend/server.js` + Supabase)
+
+Supabase free tier limita a 1000 filas incluso en queries de conteo (`count: 'exact', head: true`). Solución: función SQL directa que corre fuera del límite PostgREST.
+
+**Función creada en Supabase (SQL Editor):**
+```sql
+CREATE OR REPLACE FUNCTION contar_productos_estado(
+  p_estado text,
+  p_tienda text DEFAULT NULL,
+  p_search text DEFAULT NULL
+)
+RETURNS bigint AS $$
+  SELECT COUNT(*)::bigint
+  FROM productos
+  WHERE estado_registro = p_estado
+    AND (p_tienda IS NULL OR tienda_origen = p_tienda)
+    AND (p_search IS NULL OR (
+      nombre ILIKE '%' || p_search || '%' OR
+      descripcion ILIKE '%' || p_search || '%' OR
+      nombre_producto ILIKE '%' || p_search || '%'
+    ))
+$$ LANGUAGE sql SECURITY DEFINER;
+```
+
+**Backend usa `supabase.rpc()`** para llamar esta función y obtener el total real, en paralelo con la query de datos.
+
+#### 4. Contador en frontend (`apps/*/src/pages/Registro.jsx`)
+
+- Agregado estado `totalProductos` que guarda `response.pagination.total`
+- **Sin filtros activos:** muestra `"1579 productos"` (total real)
+- **Con filtro proveedor/marca:** muestra `"Mostrando 45 de 1579 productos"`
+- Aplicado en las 3 apps: mundolib-app, majoli-app, lili-app
+
+### Estructura final del endpoint `GET /api/productos/estado/:estado`
+
+```
+1. supabase.rpc('contar_productos_estado') → total real (sin límite)
+2. supabase.from('productos').select().range(0, 999) → datos (máx 1000)
+Ambas en Promise.all() → respuesta: { data, pagination: { total, ... } }
+```
+
+### Números reales del catálogo (Majoli)
+- Completados: ~1579 productos
+- Existentes: ~598 productos
+- Con la búsqueda se puede encontrar cualquier producto aunque no esté en los 1000 cargados
+
+### Deploy
+- **Backend (Render):** `git push origin master` → auto-deploy
+- **Frontend (Vercel):** `vercel --prod` desde cada carpeta de app (Vercel no tiene auto-deploy desde GitHub en este proyecto)
+
+### Archivos modificados
+```
+backend/server.js                          → límite, filtro tienda, conteo con RPC
+apps/mundolib-app/src/pages/Registro.jsx   → totalProductos state + display
+apps/majoli-app/src/pages/Registro.jsx     → totalProductos state + display
+apps/lili-app/src/pages/Registro.jsx       → totalProductos state + display
+```
+
+### Commits
+1. `Fix: subir límite de productos por página de 20 a 500`
+2. `Mostrar total real de productos en Registro en lugar del límite de carga`
+3. `Fix: filtrar productos por tienda_origen en lugar de OR con stock`
+4. `Subir límite de productos por página a 3000`
+5. `Fix: consulta de conteo separada para mostrar total real pese al límite de Supabase`
+6. `Fix: usar RPC de Supabase para conteo real sin límite de 1000 filas`
 
