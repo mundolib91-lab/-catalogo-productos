@@ -416,7 +416,7 @@ app.get('/api/reportes/stock-bajo', async (req, res) => {
 app.get('/api/productos/estado/:estado', async (req, res) => {
   try {
     const { estado } = req.params; // proceso, completado, existente
-    const { page = 1, limit = 500, search = '', tienda = null, incluir_sin_stock = 'false' } = req.query;
+    const { page = 1, limit = 3000, search = '', tienda = null, incluir_sin_stock = 'false' } = req.query;
     const offset = (page - 1) * limit;
     const incluirSinStock = incluir_sin_stock === 'true';
 
