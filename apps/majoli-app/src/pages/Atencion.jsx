@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import { getProductosPorEstado, reportarFaltante as reportarFaltanteAPI } from '../utils/api';
 import { useTheme } from '../hooks/useTheme';
 import DetalleProducto from '../components/DetalleProducto';
@@ -14,7 +15,7 @@ import APP_CONFIG from '../config';
 function Atencion({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
   const { toast, success, error: mostrarError, cerrarToast } = useToast();
-  const [productos, setProductos] = useState([]);
+  const [todosLosProductos, setTodosLosProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
 
@@ -34,7 +35,7 @@ function Atencion({ menuHamburguesa }) {
 
   useEffect(() => {
     cargarProductos();
-  }, [busqueda, soloFaltantes]);
+  }, []);
 
   const cargarProductos = async () => {
     setLoading(true);
@@ -42,8 +43,8 @@ function Atencion({ menuHamburguesa }) {
       // Traer productos existentes Y completados en paralelo
       // incluir_sin_stock=true para mostrar productos aunque no tengan cantidad
       const [responseExistente, responseCompletado] = await Promise.all([
-        getProductosPorEstado('existente', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' }),
-        getProductosPorEstado('completado', { search: busqueda, tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' })
+        getProductosPorEstado('existente', { tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' }),
+        getProductosPorEstado('completado', { tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' })
       ]);
 
       // Combinar ambos arrays
@@ -63,12 +64,7 @@ function Atencion({ menuHamburguesa }) {
         return tieneImagen && tienePrecioVenta && tienePrecioCompra && tieneDescripcion;
       });
 
-      // Filtrar solo faltantes si está activado
-      if (soloFaltantes) {
-        productosData = productosData.filter(p => p.faltante_reportado === true);
-      }
-
-      setProductos(productosData);
+      setTodosLosProductos(productosData);
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
@@ -76,9 +72,33 @@ function Atencion({ menuHamburguesa }) {
     }
   };
 
+  const productosFiltrados = useMemo(() => {
+    let lista = todosLosProductos;
+
+    if (soloFaltantes) {
+      lista = lista.filter(p => p.faltante_reportado === true);
+    }
+
+    if (!busqueda.trim()) return lista;
+
+    const palabras = busqueda.trim().split(/\s+/).filter(Boolean);
+    let idsValidos = null;
+
+    for (const palabra of palabras) {
+      const fuse = new Fuse(lista, {
+        keys: ['descripcion', 'nombre', 'marca'],
+        threshold: 0.4,
+        minMatchCharLength: 2,
+      });
+      const ids = new Set(fuse.search(palabra).map(r => r.item.id));
+      idsValidos = idsValidos === null ? ids : new Set([...idsValidos].filter(id => ids.has(id)));
+    }
+
+    return lista.filter(p => idsValidos?.has(p.id));
+  }, [todosLosProductos, busqueda, soloFaltantes]);
+
   const abrirFormularioReportarExistente = (productoId) => {
-    // Buscar el producto en la lista actual
-    const producto = productos.find(p => p.id === productoId);
+    const producto = todosLosProductos.find(p => p.id === productoId);
     if (!producto) {
       mostrarError('Producto no encontrado');
       return;
@@ -90,8 +110,7 @@ function Atencion({ menuHamburguesa }) {
 
   const reportarFaltante = async ({ productoId, prioridad, notas }) => {
     try {
-      // Buscar el producto en la lista actual
-      const producto = productos.find(p => p.id === productoId);
+      const producto = todosLosProductos.find(p => p.id === productoId);
       if (!producto) {
         mostrarError('Producto no encontrado');
         return;
@@ -233,16 +252,16 @@ function Atencion({ menuHamburguesa }) {
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando productos...</p>
           </div>
-        ) : productos.length === 0 ? (
+        ) : productosFiltrados.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
             <p className="text-3xl">📦</p>
             <p className="text-gray-600 dark:text-gray-400 mt-4">
-              {soloFaltantes ? 'No hay productos faltantes' : 'No hay productos disponibles'}
+              {busqueda.trim() ? 'No se encontraron productos con esa búsqueda' : soloFaltantes ? 'No hay productos faltantes' : 'No hay productos disponibles'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {productos.map((producto) => (
+            {productosFiltrados.map((producto) => (
               <ProductoCard
                 key={producto.id}
                 producto={producto}

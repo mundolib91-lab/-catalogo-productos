@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import { getProductosPorEstado, createProductoRapido, updateProducto } from '../utils/api';
 import FormularioCompleto from './FormularioCompleto';
 import VerEditarProducto from './VerEditarProducto';
@@ -15,7 +16,7 @@ function Registro({ menuHamburguesa }) {
   const { theme, toggleTheme } = useTheme();
   const { toast, success, error: mostrarError, cerrarToast } = useToast();
   const [pestanaActiva, setPestanaActiva] = useState('existente');
-  const [productos, setProductos] = useState([]);
+  const [todosLosProductos, setTodosLosProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -36,7 +37,7 @@ function Registro({ menuHamburguesa }) {
   // Cargar productos según pestaña activa
   useEffect(() => {
     cargarProductos();
-  }, [pestanaActiva, busqueda, filtroProveedor, filtroMarca, filtroOrden]);
+  }, [pestanaActiva]);
 
   // Cargar proveedores y marcas al montar
   useEffect(() => {
@@ -48,32 +49,12 @@ function Registro({ menuHamburguesa }) {
     setLoading(true);
     try {
       const response = await getProductosPorEstado(pestanaActiva, {
-        search: busqueda,
         tienda: APP_CONFIG.tienda,
-        incluir_sin_stock: 'true' // Mostrar productos sin stock en Registro
+        incluir_sin_stock: 'true'
       });
 
-      let productosData = response.data || [];
-      setTotalProductos(response.pagination?.total ?? productosData.length);
-
-      // Aplicar filtro por proveedor
-      if (filtroProveedor && filtroProveedor !== '') {
-        productosData = productosData.filter(p => p.proveedor === filtroProveedor);
-      }
-
-      // Aplicar filtro por marca
-      if (filtroMarca && filtroMarca !== '') {
-        productosData = productosData.filter(p => p.marca === filtroMarca);
-      }
-
-      // Aplicar ordenamiento
-      if (filtroOrden === 'recientes') {
-        productosData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      } else {
-        productosData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      }
-
-      setProductos(productosData);
+      const productosData = response.data || [];
+      setTodosLosProductos(productosData);
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
@@ -110,6 +91,38 @@ function Registro({ menuHamburguesa }) {
     setFiltroMarca('');
     setFiltroOrden('recientes');
   };
+
+  const productosFiltrados = useMemo(() => {
+    let lista = todosLosProductos;
+
+    if (busqueda.trim()) {
+      const palabras = busqueda.trim().split(/\s+/).filter(Boolean);
+      let idsValidos = null;
+
+      for (const palabra of palabras) {
+        const fuse = new Fuse(lista, {
+          keys: ['descripcion', 'nombre', 'marca', 'proveedor'],
+          threshold: 0.4,
+          minMatchCharLength: 2,
+        });
+        const ids = new Set(fuse.search(palabra).map(r => r.item.id));
+        idsValidos = idsValidos === null ? ids : new Set([...idsValidos].filter(id => ids.has(id)));
+      }
+
+      lista = lista.filter(p => idsValidos?.has(p.id));
+    }
+
+    if (filtroProveedor) lista = lista.filter(p => p.proveedor === filtroProveedor);
+    if (filtroMarca) lista = lista.filter(p => p.marca === filtroMarca);
+
+    const resultado = [...lista];
+    if (filtroOrden === 'recientes') {
+      resultado.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else {
+      resultado.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+    return resultado;
+  }, [todosLosProductos, busqueda, filtroProveedor, filtroMarca, filtroOrden]);
 
   const handleSeleccionarTipoRegistro = (tipo) => {
     setMenuRegistroAbierto(false);
@@ -307,9 +320,9 @@ function Registro({ menuHamburguesa }) {
           {!loading && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {(filtroProveedor || filtroMarca)
-                  ? <>Mostrando <span className="font-bold text-gray-800 dark:text-white">{productos.length}</span> de <span className="font-bold text-gray-800 dark:text-white">{totalProductos}</span> producto{totalProductos !== 1 ? 's' : ''}</>
-                  : <>{totalProductos} producto{totalProductos !== 1 ? 's' : ''}</>
+                {(filtroProveedor || filtroMarca || busqueda.trim())
+                  ? <>Mostrando <span className="font-bold text-gray-800 dark:text-white">{productosFiltrados.length}</span> de <span className="font-bold text-gray-800 dark:text-white">{todosLosProductos.length}</span> producto{todosLosProductos.length !== 1 ? 's' : ''}</>
+                  : <>{todosLosProductos.length} producto{todosLosProductos.length !== 1 ? 's' : ''}</>
                 }
                 {filtroProveedor && <span> • Proveedor: <span className="font-semibold">{filtroProveedor}</span></span>}
                 {filtroMarca && <span> • Marca: <span className="font-semibold">{filtroMarca}</span></span>}
@@ -326,14 +339,16 @@ function Registro({ menuHamburguesa }) {
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Cargando productos...</p>
           </div>
-        ) : productos.length === 0 ? (
+        ) : productosFiltrados.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow">
             <p className="text-3xl">📦</p>
-            <p className="text-gray-600 dark:text-gray-400 mt-4">No hay productos en esta sección</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-4">
+              {busqueda.trim() ? 'No se encontraron productos con esa búsqueda' : 'No hay productos en esta sección'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {productos.map((producto) => (
+            {productosFiltrados.map((producto) => (
               <ProductoCard
                 key={producto.id}
                 producto={producto}
