@@ -2187,6 +2187,21 @@ apps/*/src/pages/Registro.jsx    → usa getProductosPorEstadoDirecto
 apps/*/src/pages/Inventario.jsx  → usa getProductosInventarioDirecto + Fuse.js local
 ```
 
+### Problema encontrado al implementar y solución
+
+Al hacer el primer deploy con Opción A, Supabase devolvía `401 Unauthorized` en todas las queries — los productos no aparecían en ninguna app.
+
+**Causa:** La variable `VITE_SUPABASE_ANON_KEY` en Vercel tenía un **espacio en el medio** de la clave JWT, introducido al copiar/pegar. Una clave con espacio es inválida y Supabase la rechaza.
+
+**Síntoma:** `productos?select=*... 401` visible en la consola del navegador (F12).
+
+**Solución:**
+1. Ir a Supabase → Settings → API → copiar la clave `anon public` fresca
+2. En Vercel → cada proyecto → Settings → Environment Variables → borrar y recrear `VITE_SUPABASE_ANON_KEY`
+3. Hacer redeploy con `vercel --prod --force` para que tome la nueva clave
+
+**⚠️ Para futuras sesiones:** Si al implementar consultas directas a Supabase desde el frontend aparece 401, verificar primero que `VITE_SUPABASE_ANON_KEY` no tenga espacios ni caracteres extra en Vercel.
+
 ### Próximo paso si se necesita más velocidad
 
 Migrar Supabase de la región **US East** a **South America (São Paulo)**. Esto acortaría la distancia de ~8000km a ~3000km. Ver sección "Migración futura" más abajo.
