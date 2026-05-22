@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Fuse from 'fuse.js';
-import { getProductosPorEstado, createProductoRapido, updateProducto } from '../utils/api';
+import { createProductoRapido, updateProducto } from '../utils/api';
+import { getProductosPorEstadoDirecto } from '../utils/supabase';
 import FormularioCompleto from './FormularioCompleto';
 import VerEditarProducto from './VerEditarProducto';
 import SelectorImagen from '../components/SelectorImagen';
@@ -48,9 +49,8 @@ function Registro({ menuHamburguesa }) {
   const cargarProductos = async () => {
     setLoading(true);
     try {
-      const response = await getProductosPorEstado(pestanaActiva, {
-        tienda: APP_CONFIG.tienda,
-        incluir_sin_stock: 'true'
+      const response = await getProductosPorEstadoDirecto(pestanaActiva, {
+        tienda: APP_CONFIG.tienda
       });
 
       const productosData = response.data || [];

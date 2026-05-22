@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import APP_CONFIG from '../config';
+import { getProductosInventarioDirecto } from '../utils/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 function Inventario({ menuHamburguesa }) {
-  const [productos, setProductos] = useState([]);
+  const [todosLosProductos, setTodosLosProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
 
   // Modal editar stock
   const [modalStock, setModalStock] = useState(null); // { producto, ubicacion, label }
@@ -25,16 +26,11 @@ function Inventario({ menuHamburguesa }) {
 
   const searchTimeout = useRef(null);
 
-  const cargarProductos = async (pagina = 1, busqueda = '') => {
+  const cargarProductos = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ page: pagina, limit: 50, search: busqueda, tienda: APP_CONFIG.tienda });
-      const res = await fetch(`${API_URL}/inventario?${params}`);
-      const json = await res.json();
-      if (json.success) {
-        setProductos(json.data);
-        setPagination(json.pagination);
-      }
+      const json = await getProductosInventarioDirecto({ tienda: APP_CONFIG.tienda });
+      if (json.success) setTodosLosProductos(json.data);
     } catch (e) {
       console.error('Error cargando inventario:', e);
     } finally {
@@ -43,14 +39,27 @@ function Inventario({ menuHamburguesa }) {
   };
 
   useEffect(() => {
-    cargarProductos(1, '');
+    cargarProductos();
   }, []);
 
+  const productos = useMemo(() => {
+    if (!search.trim()) return todosLosProductos;
+    const palabras = search.trim().split(/\s+/).filter(Boolean);
+    let idsValidos = null;
+    for (const palabra of palabras) {
+      const fuse = new Fuse(todosLosProductos, {
+        keys: ['descripcion', 'nombre', 'marca'],
+        threshold: 0.4,
+        minMatchCharLength: 2,
+      });
+      const ids = new Set(fuse.search(palabra).map(r => r.item.id));
+      idsValidos = idsValidos === null ? ids : new Set([...idsValidos].filter(id => ids.has(id)));
+    }
+    return todosLosProductos.filter(p => idsValidos?.has(p.id));
+  }, [todosLosProductos, search]);
+
   const handleSearch = (e) => {
-    const val = e.target.value;
-    setSearch(val);
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => cargarProductos(1, val), 400);
+    setSearch(e.target.value);
   };
 
   const abrirEditarStock = (producto, ubicacion, label) => {
@@ -208,7 +217,9 @@ function Inventario({ menuHamburguesa }) {
           />
         </div>
         <div className="mt-2 text-sm opacity-80 text-center">
-          {pagination.total} productos en existencias
+          {search.trim()
+            ? `${productos.length} de ${todosLosProductos.length} productos`
+            : `${todosLosProductos.length} productos en existencias`}
         </div>
       </div>
 
@@ -417,28 +428,6 @@ function Inventario({ menuHamburguesa }) {
         </table>
       </div>
 
-      {/* Paginacion */}
-      {pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 p-4">
-          <button
-            disabled={pagination.page <= 1}
-            onClick={() => cargarProductos(pagination.page - 1, search)}
-            className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 font-semibold"
-          >
-            Anterior
-          </button>
-          <span className="text-gray-600 dark:text-gray-400 font-semibold">
-            {pagination.page} / {pagination.totalPages}
-          </span>
-          <button
-            disabled={pagination.page >= pagination.totalPages}
-            onClick={() => cargarProductos(pagination.page + 1, search)}
-            className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-40 font-semibold"
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
 
       {/* Modal Editar Stock */}
       {modalStock && (

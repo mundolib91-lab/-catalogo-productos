@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Fuse from 'fuse.js';
-import { getProductosPorEstado, reportarFaltante as reportarFaltanteAPI } from '../utils/api';
+import { getProductosPorEstadoDirecto } from '../utils/supabase';
 import { useTheme } from '../hooks/useTheme';
 import DetalleProducto from '../components/DetalleProducto';
 import UsosProducto from '../components/UsosProducto';
@@ -43,8 +43,8 @@ function Atencion({ menuHamburguesa }) {
       // Traer productos existentes Y completados en paralelo
       // incluir_sin_stock=true para mostrar productos aunque no tengan cantidad
       const [responseExistente, responseCompletado] = await Promise.all([
-        getProductosPorEstado('existente', { tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' }),
-        getProductosPorEstado('completado', { tienda: APP_CONFIG.tienda, incluir_sin_stock: 'true' })
+        getProductosPorEstadoDirecto('existente', { tienda: APP_CONFIG.tienda }),
+        getProductosPorEstadoDirecto('completado', { tienda: APP_CONFIG.tienda })
       ]);
 
       // Combinar ambos arrays
