@@ -2116,3 +2116,135 @@ apps/lili-app/src/pages/Registro.jsx       → totalProductos state + display
 5. `Fix: consulta de conteo separada para mostrar total real pese al límite de Supabase`
 6. `Fix: usar RPC de Supabase para conteo real sin límite de 1000 filas`
 
+---
+
+## 🔍 BÚSQUEDA INTELIGENTE CON FUSE.JS (SESIÓN 14 - ✅ COMPLETADO)
+
+### Fecha: 2026-05-22
+
+### Problema identificado
+
+La búsqueda solo encontraba productos si se escribía exactamente el nombre registrado.
+
+- `ilike '%texto%'` en PostgreSQL es sensible al orden de palabras
+- "desodorante dove" no encontraba "desodorante en spray dove" porque hay palabras intermedias
+- No toleraba errores de tipeo: "shampoo" no encontraba "shampo" o "xampoo"
+- Cada letra que se escribía mandaba una llamada al backend (lento si Render está dormido)
+
+### Solución implementada (Opción A — Fuse.js)
+
+**Librería:** [Fuse.js](https://fusejs.io/) — búsqueda fuzzy client-side (~25kb)
+
+**Cómo funciona ahora:**
+1. Al abrir la página, se cargan **todos los productos una sola vez** (sin parámetro `search` al backend)
+2. El texto del buscador se divide en palabras: `"desodorante dove"` → `["desodorante", "dove"]`
+3. Para cada palabra, Fuse.js busca coincidencias aproximadas en `descripcion`, `nombre`, `marca` (y también `proveedor` en Registro)
+4. Se mantienen solo los productos que aparecen en **todas** las palabras (intersección)
+5. El filtrado ocurre en memoria, **sin llamadas al backend** por cada tecla
+
+**Tolerancias que maneja:**
+- Palabras intermedias: "desodorante dove" → "desodorante en spray dove" ✅
+- Errores de tipeo: "kremа" → "crema", "shamppo" → "shampoo" ✅
+- Palabras parciales: "desod" → "desodorante" ✅
+- Sin distinción mayúsculas/minúsculas ✅
+
+**Configuración de Fuse.js:**
+```javascript
+{
+  keys: ['descripcion', 'nombre', 'marca'],
+  threshold: 0.4,        // 0 = exacto, 1 = cualquier cosa — 0.4 es tolerancia media
+  minMatchCharLength: 2  // Mínimo 2 caracteres para buscar
+}
+```
+
+**Algoritmo multi-palabra:**
+```javascript
+const palabras = busqueda.trim().split(/\s+/);
+let idsValidos = null;
+
+for (const palabra of palabras) {
+  const ids = new Set(fuse.search(palabra).map(r => r.item.id));
+  // Intersección: el producto debe coincidir con TODAS las palabras
+  idsValidos = idsValidos === null ? ids : new Set([...idsValidos].filter(id => ids.has(id)));
+}
+```
+
+### Archivos modificados
+
+```
+apps/mundolib-app/src/pages/Atencion.jsx   → búsqueda fuzzy + sin search al backend
+apps/mundolib-app/src/pages/Registro.jsx   → búsqueda fuzzy + sin search al backend
+apps/majoli-app/src/pages/Atencion.jsx     → (copiado de mundolib-app)
+apps/majoli-app/src/pages/Registro.jsx     → (copiado de mundolib-app)
+apps/lili-app/src/pages/Atencion.jsx       → (copiado de mundolib-app)
+apps/lili-app/src/pages/Registro.jsx       → (copiado de mundolib-app)
+apps/*/package.json                        → dependencia fuse.js agregada
+```
+
+### Commits
+
+1. `Feat: búsqueda fuzzy con Fuse.js en Atención y Registro (3 apps)`
+
+---
+
+## ⚠️ MIGRACIÓN FUTURA: CUANDO EL CATÁLOGO CREZCA MUCHO
+
+### Cuándo migrar a Opción B (pg_trgm en Supabase)
+
+La solución actual (Fuse.js client-side) funciona bien **mientras todos los productos quepan en 1000 filas** (el límite del plan gratuito de Supabase). Si en el futuro el catálogo supera esa cantidad o el rendimiento en dispositivos lentos se resiente, se debe migrar a búsqueda server-side con `pg_trgm`.
+
+**Señales de que hay que migrar:**
+- El catálogo supera 2000-3000 productos por tienda
+- Los dispositivos lentos tardan en filtrar (Fuse.js recorre todos los productos en memoria)
+- Se necesita buscar productos que estén en páginas que no se cargaron
+
+### Cómo implementar pg_trgm (Opción B)
+
+**Paso 1 — Activar extensión en Supabase (SQL Editor):**
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
+**Paso 2 — Crear índice trigrama en las columnas relevantes:**
+```sql
+CREATE INDEX idx_productos_descripcion_trgm ON productos USING gin (descripcion gin_trgm_ops);
+CREATE INDEX idx_productos_nombre_trgm ON productos USING gin (nombre gin_trgm_ops);
+CREATE INDEX idx_productos_marca_trgm ON productos USING gin (marca gin_trgm_ops);
+```
+
+**Paso 3 — Actualizar la función SQL `contar_productos_estado` en Supabase:**
+```sql
+-- Reemplazar el filtro ILIKE por similitud trigrama:
+AND (p_search IS NULL OR (
+  descripcion % p_search OR
+  nombre % p_search OR
+  marca % p_search OR
+  word_similarity(p_search, descripcion) > 0.3
+))
+```
+
+**Paso 4 — Actualizar `backend/server.js`:**
+```javascript
+// Reemplazar la línea:
+if (search) dataQuery = dataQuery.or(`nombre.ilike.%${search}%,...`);
+
+// Por búsqueda trigrama (requiere query SQL raw o función RPC):
+// Opción: crear función RPC en Supabase que haga la búsqueda fuzzy
+```
+
+**Paso 5 — Restaurar `search: busqueda` en los frontends:**
+```javascript
+// Volver a pasar search al backend y quitar Fuse.js
+const response = await getProductosPorEstado(pestanaActiva, {
+  search: busqueda,   // ← restaurar esto
+  tienda: APP_CONFIG.tienda,
+});
+// Y eliminar el useMemo de Fuse.js
+```
+
+**Ventajas al migrar:**
+- Búsqueda sobre TODOS los productos (no solo los 1000 cargados)
+- Sin carga en memoria del cliente
+- Las 3 apps se benefician automáticamente (lógica en el backend)
+- Escala a 100.000 productos sin degradarse
+
