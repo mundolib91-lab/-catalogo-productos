@@ -2118,6 +2118,81 @@ apps/lili-app/src/pages/Registro.jsx       → totalProductos state + display
 
 ---
 
+## ⚡ LECTURA DIRECTA DESDE SUPABASE — OPCIÓN A (SESIÓN 14 - ✅ COMPLETADO)
+
+### Fecha: 2026-05-22
+
+### Problema identificado
+
+La app era lenta de forma consistente (no solo al despertar Render). Causa: cada carga de productos hacía un recorrido de 4 saltos de red:
+
+```
+App (Bolivia) → Render (USA) → Supabase (USA) → Render (USA) → App (Bolivia)
+```
+
+Render es un intermediario innecesario para leer datos — solo agrega latencia sin aportar lógica en las lecturas.
+
+### Solución implementada
+
+Las páginas de lectura (Atención, Registro, Inventario) ahora consultan **Supabase directamente** desde el frontend, eliminando Render del camino:
+
+```
+App (Bolivia) → Supabase (USA) → App (Bolivia)
+```
+
+Las **escrituras** (crear producto, editar, eliminar, faltantes, trasladar stock) siguen pasando por Render — ahí sí tiene sentido porque el backend aplica lógica de negocio.
+
+### Archivo nuevo: `utils/supabase.js`
+
+Creado en las 3 apps. Exporta el cliente Supabase y las funciones de lectura:
+
+```javascript
+// Leer productos por estado (reemplaza GET /api/productos/estado/:estado)
+getProductosPorEstadoDirecto(estado, { tienda })
+
+// Leer productos para inventario (reemplaza GET /api/inventario)
+getProductosInventarioDirecto({ tienda })
+```
+
+Ambas funciones usan el `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` ya configurados en Vercel.
+
+### Inventario — mejoras adicionales
+
+- Búsqueda fuzzy con Fuse.js (mismo patrón que Registro/Atención)
+- Se eliminó la paginación (carga todos los productos de una vez, filtra localmente)
+- El debounce de búsqueda desapareció — el filtrado es instantáneo
+
+### Resultado
+
+Mejora de velocidad notable y consistente en todas las vistas de carga de productos.
+
+### Qué sigue usando Render
+
+| Operación | Sigue en Render |
+|-----------|----------------|
+| Crear producto (rapido/lote) | ✅ |
+| Editar producto | ✅ |
+| Eliminar producto | ✅ |
+| Agregar stock | ✅ |
+| Trasladar depósito → tienda | ✅ |
+| Faltantes (crear/editar) | ✅ |
+| Proveedores y marcas | ✅ |
+
+### Archivos modificados
+
+```
+apps/*/src/utils/supabase.js     → nuevo — cliente Supabase + funciones de lectura
+apps/*/src/pages/Atencion.jsx    → usa getProductosPorEstadoDirecto
+apps/*/src/pages/Registro.jsx    → usa getProductosPorEstadoDirecto
+apps/*/src/pages/Inventario.jsx  → usa getProductosInventarioDirecto + Fuse.js local
+```
+
+### Próximo paso si se necesita más velocidad
+
+Migrar Supabase de la región **US East** a **South America (São Paulo)**. Esto acortaría la distancia de ~8000km a ~3000km. Ver sección "Migración futura" más abajo.
+
+---
+
 ## 🔍 BÚSQUEDA INTELIGENTE CON FUSE.JS (SESIÓN 14 - ✅ COMPLETADO)
 
 ### Fecha: 2026-05-22
