@@ -1,7 +1,20 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { createClient } = require('@supabase/supabase-js');
+
+// Cloudflare R2
+const r2 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,6 +28,32 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// ==================== ENDPOINT SUBIDA DE IMÁGENES ====================
+
+app.post('/api/upload/imagen', upload.single('imagen'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No se recibió ningún archivo' });
+    }
+
+    const ext = req.file.mimetype.split('/')[1].replace('jpeg', 'jpg');
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    await r2.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: filename,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    }));
+
+    const url = `${process.env.R2_PUBLIC_URL}/${filename}`;
+    res.json({ success: true, url });
+  } catch (error) {
+    console.error('Error subiendo imagen a R2:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ==================== ENDPOINTS ====================
 
