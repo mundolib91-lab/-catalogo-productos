@@ -2336,5 +2336,184 @@ const response = await getProductosPorEstado(pestanaActiva, {
 - Búsqueda sobre TODOS los productos (no solo los 1000 cargados)
 - Sin carga en memoria del cliente
 - Las 3 apps se benefician automáticamente (lógica en el backend)
-- Escala a 100.000 productos sin degradarse
+- Escala a 100.000 productos sin degraderse
+
+---
+
+## 🖼️ MIGRACIÓN DE IMÁGENES: CLOUDINARY → CLOUDFLARE R2 (SESIÓN 15 - ✅ COMPLETADO)
+
+### Fecha: 2026-06-05
+
+### Problema identificado
+
+La cuenta de Cloudinary (cloud name: `ddkuwch5y`) fue **completamente desactivada** por superar el límite del plan gratuito. El plan gratuito pasó de 25GB de storage/bandwidth a un sistema de **créditos** (25 créditos/mes). La app consumió ~124 créditos (496% del límite) principalmente por bandwidth de entrega de imágenes.
+
+**Síntoma:** Todas las imágenes del catálogo devolvían `401 Unauthorized`:
+```
+GET https://res.cloudinary.com/ddkuwch5y/image/upload/v.../productos/xxx.jpg 401
+```
+
+**Estado de las imágenes:**
+- 3.192 imágenes en Cloudinary → **bloqueadas e inaccesibles**
+- 2 imágenes ya estaban en Supabase Storage → siguen funcionando
+- La cuenta Cloudinary está completamente desactivada (`"disabled customer"` en la API)
+
+### Imágenes viejas — recuperación pendiente
+
+Se envió email a **support@cloudinary.com** desde mundolib91@gmail.com solicitando:
+1. Export ZIP de la carpeta `productos`, o
+2. Acceso API temporal (48-72hs) para migrar los datos
+
+Hasta recibir respuesta, los 3.192 productos viejos muestran imagen rota. Los productos nuevos ya funcionan con R2.
+
+### Solución implementada — Cloudflare R2
+
+**¿Por qué R2?**
+- Bandwidth de salida **siempre gratis** (ese fue el problema con Cloudinary)
+- 10 GB storage gratis/mes
+- 1M operaciones de escritura gratis/mes
+- 10M operaciones de lectura gratis/mes
+- Para 3.200 fotos de productos el costo estimado es **$0/mes**
+
+**Cuenta Cloudflare:** mundolib91@gmail.com
+**Bucket:** `productos-imagenes`
+**Región:** América del Norte Oriental (ENAM)
+
+### Credenciales R2 configuradas
+
+| Variable | Dónde |
+|---|---|
+| `R2_ACCOUNT_ID` | backend/.env + Render |
+| `R2_ACCESS_KEY_ID` | backend/.env + Render |
+| `R2_SECRET_ACCESS_KEY` | backend/.env + Render |
+| `R2_BUCKET_NAME=productos-imagenes` | backend/.env + Render |
+| `R2_PUBLIC_URL=https://pub-aeaa5e60340f4d26b927499ea95f759b.r2.dev` | backend/.env + Render |
+
+### Arquitectura nueva de subida de imágenes
+
+**Antes (Cloudinary):**
+```
+Frontend → Cloudinary (directo, con upload_preset unsigned)
+```
+
+**Ahora (R2):**
+```
+Frontend → Backend (Render) → Cloudflare R2
+```
+
+El frontend ya no tiene credenciales de ningún servicio de imágenes. Todo pasa por el backend.
+
+### Cambios en el código
+
+**Backend — `backend/server.js`:**
+- Agregado cliente R2 con `@aws-sdk/client-s3` (S3-compatible)
+- Agregado `multer` para recibir archivos multipart
+- Nuevo endpoint: `POST /api/upload/imagen`
+  - Recibe el archivo como `multipart/form-data` campo `imagen`
+  - Genera nombre único con timestamp + random
+  - Sube a R2 con `PutObjectCommand`
+  - Devuelve `{ success: true, url: "https://pub-xxx.r2.dev/filename.jpg" }`
+
+**Backend — `backend/package.json`:**
+- Agregado `multer` 
+- Agregado `@aws-sdk/client-s3`
+
+**Frontend — `apps/*/src/utils/imageUpload.js` (las 3 apps):**
+- Eliminada toda referencia a Cloudinary
+- Ahora llama a `${API_URL}/upload/imagen` con FormData
+- Devuelve la URL pública de R2
+
+### Notas de deployment
+
+**Vercel NO tiene auto-deploy desde GitHub** en este proyecto. Los deploys se hacen con Vercel CLI:
+```bash
+cd apps/mundolib-app && vercel deploy --prod
+cd apps/majoli-app && vercel deploy --prod
+cd apps/lili-app && vercel deploy --prod
+```
+
+Render sí tiene auto-deploy desde GitHub (push a master → Render redeploya automáticamente).
+
+### ⚠️ Error importante al deployar
+
+Al hacer `vercel deploy --prod`, Vercel puede usar un build cacheado aunque el código haya cambiado. Si la app sigue mostrando el error viejo:
+1. Verificar el hash del bundle JS en la consola (debe cambiar con cada build)
+2. Si no cambió → Vercel no redesplegó → usar `vercel deploy --prod --force`
+
+### Archivos modificados
+
+```
+backend/.env                               → variables R2 agregadas
+backend/server.js                          → cliente R2 + endpoint /api/upload/imagen
+backend/package.json                       → multer + @aws-sdk/client-s3
+apps/mundolib-app/src/utils/imageUpload.js → llama al backend, no a Cloudinary
+apps/majoli-app/src/utils/imageUpload.js   → ídem
+apps/lili-app/src/utils/imageUpload.js     → ídem
+```
+
+### Commit
+
+`Feat: migrar subida de imagenes de Cloudinary a Cloudflare R2`
+
+### Pendiente (al cerrar sesión 15)
+
+- Esperar respuesta de Cloudinary support (mundolib91@gmail.com)
+- Si recuperan acceso → preparar script de migración masiva (descarga de Cloudinary → sube a R2 → actualiza URLs en BD)
+- Placeholder visual para imágenes rotas (productos viejos con URL de Cloudinary)
+
+---
+
+## 🖼️ MIGRACIÓN MASIVA DE IMÁGENES CLOUDINARY → R2 (SESIÓN 16 - ✅ COMPLETADO)
+
+### Fecha: 2026-06-08
+
+### Contexto
+
+Cloudinary support respondió al email enviado en sesión 15 y **reactivó la cuenta temporalmente**. Con acceso a las imágenes disponible, se ejecutó la migración masiva de las 3.192 imágenes viejas.
+
+### Solución implementada
+
+**Script:** `backend/migrate-cloudinary-to-r2.js`
+
+El script hace todo en un solo paso:
+1. Consulta Supabase y obtiene todos los productos donde `imagen ILIKE '%cloudinary%'`
+2. Por cada producto: descarga la imagen de Cloudinary → sube a R2 → actualiza el campo `imagen` en Supabase con la nueva URL de R2
+3. Procesa **10 imágenes en paralelo** (con `Promise.all` y un worker pool) para reducir el tiempo de ~2 horas a ~15 minutos
+
+**Modo dry-run** (`--dry-run`): solo descarga sin modificar nada, para verificar que todas las URLs de Cloudinary están accesibles antes de la migración real.
+
+```bash
+# Verificación previa (no modifica nada)
+node migrate-cloudinary-to-r2.js --dry-run
+
+# Migración real
+node migrate-cloudinary-to-r2.js
+```
+
+### Resultado
+
+```
+Total procesados : 3192
+Migrados con éxito: 3192
+Con error        : 0
+```
+
+**3192 de 3192 imágenes migradas sin errores.** Todas las URLs en Supabase ahora apuntan a R2.
+
+### Estado actual de imágenes
+
+- ✅ Imágenes viejas (migradas): R2 con URL `https://pub-aeaa5e60340f4d26b927499ea95f759b.r2.dev/migrated_*`
+- ✅ Imágenes nuevas (subidas desde sesión 15): R2 con URL `https://pub-aeaa5e60340f4d26b927499ea95f759b.r2.dev/*`
+- ❌ Cloudinary: ya no se usa en ningún caso
+
+### Archivos creados
+
+```
+backend/migrate-cloudinary-to-r2.js   → script de migración (se puede volver a correr si es necesario)
+```
+
+### Pendiente de esta sesión
+
+- **Comprimir imágenes migradas:** Las 3.192 imágenes se subieron a R2 sin comprimir (originales de Cloudinary). Las imágenes nuevas sí se comprimen a 300KB/1200px con `browser-image-compression` en el frontend. Para comprimir las viejas se necesita un segundo script con `sharp` en Node. No es urgente — las imágenes funcionan, solo son más pesadas.
+- **Evaluar migración de Supabase a región São Paulo:** Actualmente Supabase está en US East (Virginia). São Paulo reduciría la latencia desde Bolivia de ~8.000km a ~3.000km. También pendiente, no urgente.
 
