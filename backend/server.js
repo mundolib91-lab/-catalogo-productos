@@ -1620,6 +1620,41 @@ app.post('/api/variantes/:id/trasladar', async (req, res) => {
   }
 });
 
+// ==================== ENDPOINTS POS (LILI) ====================
+
+// POST login por PIN — identifica al empleado que va a operar el POS
+app.post('/api/pos/login', async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!pin || !pin.toString().trim()) {
+      return res.status(400).json({ success: false, error: 'Falta el PIN' });
+    }
+
+    const { data: empleado, error } = await supabase
+      .from('empleados')
+      .select('id, nombre, rol, activo')
+      .eq('pin', pin.toString().trim())
+      .single();
+
+    if (error || !empleado) {
+      return res.status(401).json({ success: false, error: 'PIN incorrecto' });
+    }
+
+    if (!empleado.activo) {
+      return res.status(403).json({ success: false, error: 'Empleado inactivo' });
+    }
+
+    // No devolver el PIN en la respuesta
+    res.json({
+      success: true,
+      data: { id: empleado.id, nombre: empleado.nombre, rol: empleado.rol }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 20. Endpoint de prueba
 app.get('/', (req, res) => {
   res.json({
