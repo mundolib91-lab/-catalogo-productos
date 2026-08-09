@@ -418,6 +418,11 @@ function Registro({ menuHamburguesa }) {
   );
 }
 
+const formatFechaIngreso = (fecha) => {
+  if (!fecha) return null;
+  return new Date(fecha).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
 // Componente Card de Producto
 function ProductoCard({ producto, tipo, onActualizar }) {
   const colorBorde =
@@ -442,8 +447,11 @@ function ProductoCard({ producto, tipo, onActualizar }) {
       </div>
 
       {/* Info */}
-      <p className="text-lg text-gray-700 dark:text-gray-300 mb-3 line-clamp-2 min-h-[2.5rem]">
+      <p className="text-lg text-gray-700 dark:text-gray-300 mb-1 line-clamp-2 min-h-[2.5rem]">
         {producto.descripcion || producto.nombre || 'Sin descripción'}
+      </p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 min-h-[1rem]" title="Fecha del último ingreso de stock">
+        {formatFechaIngreso(producto.fecha_ingreso) ? `📅 Ingreso: ${formatFechaIngreso(producto.fecha_ingreso)}` : ''}
       </p>
 
       {tipo === 'existente' && (

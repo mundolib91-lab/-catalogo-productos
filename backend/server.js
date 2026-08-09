@@ -325,7 +325,10 @@ app.get('/api/productos/:id', async (req, res) => {
 // 3. Crear un producto nuevo
 app.post('/api/productos', async (req, res) => {
   try {
-    const productoData = req.body;
+    const productoData = { ...req.body };
+    if (!productoData.fecha_ingreso) {
+      productoData.fecha_ingreso = new Date().toISOString();
+    }
 
     const { data, error } = await supabase
       .from('productos')
@@ -356,6 +359,20 @@ app.put('/api/productos/:id', async (req, res) => {
     }
     if (updates.precio_venta_unidad !== undefined) {
       updates.fecha_modif_precio_venta = new Date().toISOString();
+    }
+
+    // Si sube algún stock, registrar fecha de ingreso (no cuenta si es una baja/corrección)
+    const camposStock = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    const stockTocado = camposStock.filter(c => updates[c] !== undefined && updates[c] !== null && updates[c] !== '');
+    if (stockTocado.length > 0) {
+      const { data: actual } = await supabase
+        .from('productos')
+        .select(stockTocado.join(','))
+        .eq('id', id)
+        .single();
+      if (actual && stockTocado.some(c => parseInt(updates[c]) > (actual[c] || 0))) {
+        updates.fecha_ingreso = new Date().toISOString();
+      }
     }
 
     // Limpiar campos undefined o null
@@ -807,7 +824,8 @@ app.post('/api/productos/lote', async (req, res) => {
         precio_compra_unidad: precioCompra,
         precio_venta_unidad: precioVenta,
         estado_registro: estadoInicial,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        fecha_ingreso: new Date().toISOString()
       };
 
       // Si está completado, agregar fechas
@@ -1394,11 +1412,26 @@ app.patch('/api/inventario/:id/stock', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Cantidad inválida' });
     }
 
+    const nuevaCantidad = parseInt(cantidad);
+
+    // Obtener stock actual para saber si esto es un ingreso (aumento) o una corrección hacia abajo
+    const { data: actual, error: errorActual } = await supabase
+      .from('productos')
+      .select(ubicacion)
+      .eq('id', id)
+      .single();
+    if (errorActual) throw errorActual;
+
+    const updateData = { [ubicacion]: nuevaCantidad };
+    if (nuevaCantidad > (actual[ubicacion] || 0)) {
+      updateData.fecha_ingreso = new Date().toISOString();
+    }
+
     const { data, error } = await supabase
       .from('productos')
-      .update({ [ubicacion]: parseInt(cantidad) })
+      .update(updateData)
       .eq('id', id)
-      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili, fecha_ingreso')
       .single();
 
     if (error) throw error;
@@ -1442,10 +1475,11 @@ app.post('/api/inventario/trasladar', async (req, res) => {
       .from('productos')
       .update({
         stock_deposito: (producto.stock_deposito || 0) - cant,
-        [`stock_${tienda_destino}`]: (producto[`stock_${tienda_destino}`] || 0) + cant
+        [`stock_${tienda_destino}`]: (producto[`stock_${tienda_destino}`] || 0) + cant,
+        fecha_ingreso: new Date().toISOString()
       })
       .eq('id', producto_id)
-      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili')
+      .select('id, descripcion, stock_deposito, stock_mundo_lib, stock_majoli, stock_lili, fecha_ingreso')
       .single();
 
     if (error) throw error;
@@ -1651,6 +1685,161 @@ app.post('/api/pos/login', async (req, res) => {
       data: { id: empleado.id, nombre: empleado.nombre, rol: empleado.rol }
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST registrar venta — crea la venta, sus items, descuenta stock y loguea el movimiento
+app.post('/api/pos/venta', async (req, res) => {
+  try {
+    const { empleado_id, medio_pago, tienda = 'lili', items } = req.body;
+
+    // Validaciones básicas
+    if (!empleado_id) {
+      return res.status(400).json({ success: false, error: 'Falta empleado_id' });
+    }
+    if (!['efectivo', 'transferencia_qr'].includes(medio_pago)) {
+      return res.status(400).json({
+        success: false,
+        error: 'medio_pago inválido. Valores permitidos: efectivo, transferencia_qr'
+      });
+    }
+    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
+    if (!tiendasValidas.includes(tienda)) {
+      return res.status(400).json({ success: false, error: 'Tienda inválida' });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: 'La venta necesita al menos un ítem' });
+    }
+
+    const campoStock = `stock_${tienda}`;
+    const itemsResueltos = [];
+
+    // 1. Resolver precio y validar stock de CADA ítem antes de escribir nada
+    for (const item of items) {
+      const { producto_id, variante_id, cantidad } = item;
+
+      if (!cantidad || cantidad <= 0) {
+        return res.status(400).json({ success: false, error: 'Cada ítem necesita cantidad > 0' });
+      }
+      if (!producto_id && !variante_id) {
+        return res.status(400).json({ success: false, error: 'Cada ítem necesita producto_id o variante_id' });
+      }
+
+      if (variante_id) {
+        const { data: variante, error } = await supabase
+          .from('variantes')
+          .select(`id, producto_id, precio_venta, ${campoStock}`)
+          .eq('id', variante_id)
+          .single();
+        if (error || !variante) {
+          return res.status(404).json({ success: false, error: `Variante ${variante_id} no encontrada` });
+        }
+
+        // Si la variante no tiene precio propio, hereda el del producto padre
+        let precioUnitario = variante.precio_venta;
+        if (precioUnitario == null) {
+          const { data: padre, error: errorPadre } = await supabase
+            .from('productos')
+            .select('precio_venta_unidad')
+            .eq('id', variante.producto_id)
+            .single();
+          if (errorPadre) throw errorPadre;
+          precioUnitario = padre.precio_venta_unidad;
+        }
+
+        const stockDisponible = variante[campoStock] || 0;
+        if (cantidad > stockDisponible) {
+          return res.status(400).json({
+            success: false,
+            error: `Stock insuficiente para variante ${variante_id} en ${tienda}. Disponible: ${stockDisponible}`
+          });
+        }
+
+        itemsResueltos.push({ variante_id, producto_id: null, cantidad, precioUnitario, stockActual: stockDisponible });
+      } else {
+        const { data: producto, error } = await supabase
+          .from('productos')
+          .select(`id, precio_venta_unidad, ${campoStock}`)
+          .eq('id', producto_id)
+          .single();
+        if (error || !producto) {
+          return res.status(404).json({ success: false, error: `Producto ${producto_id} no encontrado` });
+        }
+
+        const stockDisponible = producto[campoStock] || 0;
+        if (cantidad > stockDisponible) {
+          return res.status(400).json({
+            success: false,
+            error: `Stock insuficiente para producto ${producto_id} en ${tienda}. Disponible: ${stockDisponible}`
+          });
+        }
+
+        itemsResueltos.push({
+          producto_id, variante_id: null, cantidad,
+          precioUnitario: producto.precio_venta_unidad,
+          stockActual: stockDisponible
+        });
+      }
+    }
+
+    const total = itemsResueltos.reduce((acc, it) => acc + it.precioUnitario * it.cantidad, 0);
+
+    // 2. Crear la cabecera de la venta
+    const { data: venta, error: errorVenta } = await supabase
+      .from('ventas')
+      .insert([{ empleado_id, tienda, medio_pago, total }])
+      .select()
+      .single();
+    if (errorVenta) throw errorVenta;
+
+    // 3. Por cada ítem: guardar el detalle, descontar stock y loguear el movimiento
+    const itemsGuardados = [];
+    for (const it of itemsResueltos) {
+      const subtotal = it.precioUnitario * it.cantidad;
+
+      const { data: itemGuardado, error: errorItem } = await supabase
+        .from('venta_items')
+        .insert([{
+          venta_id: venta.id,
+          producto_id: it.producto_id,
+          variante_id: it.variante_id,
+          cantidad: it.cantidad,
+          precio_unitario: it.precioUnitario,
+          subtotal
+        }])
+        .select()
+        .single();
+      if (errorItem) throw errorItem;
+      itemsGuardados.push(itemGuardado);
+
+      const tabla = it.variante_id ? 'variantes' : 'productos';
+      const idFila = it.variante_id || it.producto_id;
+
+      const { error: errorStock } = await supabase
+        .from(tabla)
+        .update({ [campoStock]: it.stockActual - it.cantidad })
+        .eq('id', idFila);
+      if (errorStock) throw errorStock;
+
+      const { error: errorMovimiento } = await supabase
+        .from('movimientos_stock')
+        .insert([{
+          producto_id: it.producto_id,
+          variante_id: it.variante_id,
+          tipo: 'salida',
+          motivo: 'venta',
+          cantidad: it.cantidad,
+          ubicacion: tienda,
+          venta_id: venta.id,
+          empleado_id
+        }]);
+      if (errorMovimiento) throw errorMovimiento;
+    }
+
+    res.status(201).json({ success: true, data: { ...venta, items: itemsGuardados } });
+  } catch (error) {
+    console.error('❌ Error registrando venta POS:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

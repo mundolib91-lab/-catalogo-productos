@@ -84,7 +84,7 @@ function Inventario({ menuHamburguesa }) {
         });
         const json = await res.json();
         if (json.success) {
-          setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
+          setTodosLosProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
           setModalStock(null);
         }
       }
@@ -135,7 +135,7 @@ function Inventario({ menuHamburguesa }) {
         });
         const json = await res.json();
         if (json.success) {
-          setProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
+          setTodosLosProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
           setModalTrasladar(null);
           setTraslado({ tienda: 'mundo_lib', cantidad: '' });
         } else {
@@ -151,6 +151,11 @@ function Inventario({ menuHamburguesa }) {
 
   const totalStock = (p) =>
     (p.stock_deposito || 0) + (p.stock_mundo_lib || 0) + (p.stock_majoli || 0) + (p.stock_lili || 0);
+
+  const formatFechaIngreso = (fecha) => {
+    if (!fecha) return null;
+    return new Date(fecha).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   const toggleExpandir = async (productoId) => {
     const nuevosExpandidos = new Set(expandidos);
@@ -293,6 +298,11 @@ function Inventario({ menuHamburguesa }) {
                           )}
                           {tieneVariantes && (
                             <div className="text-xs text-purple-600 dark:text-purple-400">{variantesInfo.data.length} variantes</div>
+                          )}
+                          {formatFechaIngreso(p.fecha_ingreso) && (
+                            <div className="text-xs text-gray-400 dark:text-gray-500" title="Fecha del último ingreso de stock">
+                              📅 {formatFechaIngreso(p.fecha_ingreso)}
+                            </div>
                           )}
                         </div>
                       </div>
