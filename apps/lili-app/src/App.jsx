@@ -7,15 +7,27 @@ import Inventario from './pages/Inventario';
 import MenuHamburguesa from './components/MenuHamburguesa';
 import APP_CONFIG from './config';
 
+const VISTAS_VALIDAS = ['atencion', 'registro', 'faltantes', 'gestion', 'inventario'];
+const VISTA_GUARDADA_KEY = `${APP_CONFIG.tienda}_ultima_vista`;
+
 function App() {
-  const [vistaActual, setVistaActual] = useState('registro');
+  const [vistaActual, setVistaActualState] = useState(() => {
+    // Recordar el último módulo visitado (sobrevive a refresh y actualización de la PWA)
+    const guardada = localStorage.getItem(VISTA_GUARDADA_KEY);
+    return VISTAS_VALIDAS.includes(guardada) ? guardada : 'registro';
+  });
   const [esPantallaPequena, setEsPantallaPequena] = useState(window.innerWidth < 1024);
 
+  const setVistaActual = (vista) => {
+    setVistaActualState(vista);
+    localStorage.setItem(VISTA_GUARDADA_KEY, vista);
+  };
+
   useEffect(() => {
-    // Detectar parámetro ?view en la URL (para PWA individual)
+    // Detectar parámetro ?view en la URL (para PWA individual) — tiene prioridad sobre lo guardado
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
-    if (view === 'atencion' || view === 'registro' || view === 'faltantes' || view === 'gestion' || view === 'inventario') {
+    if (VISTAS_VALIDAS.includes(view)) {
       setVistaActual(view);
     }
 

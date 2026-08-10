@@ -5,6 +5,22 @@ import { getProductosInventarioDirecto } from '../utils/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+const UBICACION_LABELS = {
+  stock_deposito: 'Depósito',
+  stock_mundo_lib: 'Mundo Lib',
+  stock_majoli: 'Majoli',
+  stock_lili: 'Lili Cosméticos'
+};
+
+const ORIGEN_LABELS = {
+  alta_individual: 'Alta de producto',
+  alta_lote: 'Alta por lote',
+  agregar_stock: '+ Stock',
+  edicion_inventario: 'Edición en Inventario',
+  edicion_registro: 'Edición en Registro',
+  traslado_deposito: 'Traslado desde depósito'
+};
+
 function Inventario({ menuHamburguesa }) {
   const [todosLosProductos, setTodosLosProductos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +39,10 @@ function Inventario({ menuHamburguesa }) {
   // Variantes
   const [expandidos, setExpandidos] = useState(new Set());
   const [variantesPorProducto, setVariantesPorProducto] = useState({}); // { productoId: { data: [], loading: false } }
+
+  // Modal historial de entradas de stock
+  const [modalHistorial, setModalHistorial] = useState(null); // { producto }
+  const [historial, setHistorial] = useState({ data: [], loading: false });
 
   const searchTimeout = useRef(null);
 
@@ -65,6 +85,19 @@ function Inventario({ menuHamburguesa }) {
   const abrirEditarStock = (producto, ubicacion, label) => {
     setModalStock({ producto, ubicacion, label });
     setNuevoStock(String(producto[ubicacion] ?? 0));
+  };
+
+  const abrirHistorial = async (producto) => {
+    setModalHistorial({ producto });
+    setHistorial({ data: [], loading: true });
+    try {
+      const res = await fetch(`${API_URL}/productos/${producto.id}/movimientos-stock`);
+      const json = await res.json();
+      setHistorial({ data: json.success ? json.data : [], loading: false });
+    } catch (e) {
+      console.error(e);
+      setHistorial({ data: [], loading: false });
+    }
   };
 
   const guardarStock = async () => {
@@ -353,18 +386,27 @@ function Inventario({ menuHamburguesa }) {
                       {totalStock(p)}
                     </td>
 
-                    {/* Trasladar */}
+                    {/* Trasladar + Historial */}
                     <td className="px-1 py-2 text-center">
-                      <button
-                        onClick={() => {
-                          setModalTrasladar({ producto: p });
-                          setTraslado({ tienda: 'mundo_lib', cantidad: '' });
-                        }}
-                        className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors text-base font-bold"
-                        title="Trasladar deposito a tienda"
-                      >
-                        ↔
-                      </button>
+                      <div className="flex flex-col gap-1 items-center">
+                        <button
+                          onClick={() => {
+                            setModalTrasladar({ producto: p });
+                            setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+                          }}
+                          className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors text-base font-bold"
+                          title="Trasladar deposito a tienda"
+                        >
+                          ↔
+                        </button>
+                        <button
+                          onClick={() => abrirHistorial(p)}
+                          className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-base"
+                          title="Historial de entradas de stock"
+                        >
+                          🕓
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -550,6 +592,59 @@ function Inventario({ menuHamburguesa }) {
                 {trasladando ? 'Trasladando...' : 'Confirmar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial de entradas de stock */}
+      {modalHistorial && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">🕓 Historial de entradas</h3>
+                <p className="text-base text-gray-500 dark:text-gray-400">{modalHistorial.producto.descripcion}</p>
+              </div>
+              <button
+                onClick={() => setModalHistorial(null)}
+                className="text-2xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {historial.loading ? (
+              <p className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando...</p>
+            ) : historial.data.length === 0 ? (
+              <p className="text-center py-8 text-gray-400 dark:text-gray-500 italic">
+                Sin entradas registradas todavía. Se van a ir sumando desde ahora, cada vez que suba el stock.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {historial.data.map(m => (
+                  <div key={m.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                        {UBICACION_LABELS[m.ubicacion] || m.ubicacion}
+                      </span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(m.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {' '}
+                        {new Date(m.created_at).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-600 dark:text-green-400 font-bold">
+                        +{m.cantidad_agregada} unid ({m.cantidad_anterior} → {m.cantidad_nueva})
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {ORIGEN_LABELS[m.origen] || m.origen}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

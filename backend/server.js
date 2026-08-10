@@ -29,6 +29,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Registra una entrada de stock en el historial (movimientos_stock).
+// No lanza si falla: el historial es informativo, no debe tumbar la operación principal.
+async function registrarMovimientoStock(productoId, ubicacion, cantidadAnterior, cantidadNueva, origen) {
+  const anterior = cantidadAnterior || 0;
+  const nueva = cantidadNueva || 0;
+  if (nueva <= anterior) return; // solo se registran ingresos (subidas), no correcciones a la baja
+  try {
+    const { error } = await supabase.from('movimientos_stock').insert([{
+      producto_id: productoId,
+      ubicacion,
+      cantidad_anterior: anterior,
+      cantidad_nueva: nueva,
+      cantidad_agregada: nueva - anterior,
+      origen
+    }]);
+    if (error) console.error('⚠️ No se pudo registrar movimiento de stock:', error.message);
+  } catch (e) {
+    console.error('⚠️ No se pudo registrar movimiento de stock:', e.message);
+  }
+}
+
 // ==================== ENDPOINT SUBIDA DE IMÁGENES ====================
 
 app.post('/api/upload/imagen', upload.single('imagen'), async (req, res) => {
@@ -338,6 +359,11 @@ app.post('/api/productos', async (req, res) => {
 
     if (error) throw error;
 
+    const camposStockCreacion = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    for (const c of camposStockCreacion) {
+      if (data[c] > 0) await registrarMovimientoStock(data.id, c, 0, data[c], 'alta_individual');
+    }
+
     res.status(201).json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -364,12 +390,14 @@ app.put('/api/productos/:id', async (req, res) => {
     // Si sube algún stock, registrar fecha de ingreso (no cuenta si es una baja/corrección)
     const camposStock = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
     const stockTocado = camposStock.filter(c => updates[c] !== undefined && updates[c] !== null && updates[c] !== '');
+    let stockAnterior = null;
     if (stockTocado.length > 0) {
       const { data: actual } = await supabase
         .from('productos')
         .select(stockTocado.join(','))
         .eq('id', id)
         .single();
+      stockAnterior = actual;
       if (actual && stockTocado.some(c => parseInt(updates[c]) > (actual[c] || 0))) {
         updates.fecha_ingreso = new Date().toISOString();
       }
@@ -392,6 +420,12 @@ app.put('/api/productos/:id', async (req, res) => {
     if (error) {
       console.error('❌ Error de Supabase:', error);
       throw error;
+    }
+
+    if (stockAnterior) {
+      for (const c of stockTocado) {
+        await registrarMovimientoStock(id, c, stockAnterior[c], parseInt(updates[c]), 'edicion_registro');
+      }
     }
 
     console.log('✅ Producto actualizado:', data);
@@ -698,6 +732,10 @@ app.post('/api/productos/rapido', async (req, res) => {
         throw updateError;
       }
 
+      for (const c of Object.keys(updateData)) {
+        if (updateData[c] > 0) await registrarMovimientoStock(newProducto.id, c, 0, updateData[c], 'alta_individual');
+      }
+
       // Luego hacer un SELECT separado para obtener el producto actualizado
       const { data: updatedProducto, error: selectError } = await supabase
         .from('productos')
@@ -879,6 +917,13 @@ app.post('/api/productos/lote', async (req, res) => {
     }
 
     console.log(`✅ ${data.length} productos creados exitosamente`);
+
+    const camposStockLote = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    for (const p of data) {
+      for (const c of camposStockLote) {
+        if (p[c] > 0) await registrarMovimientoStock(p.id, c, 0, p[c], 'alta_lote');
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -1436,6 +1481,8 @@ app.patch('/api/inventario/:id/stock', async (req, res) => {
 
     if (error) throw error;
 
+    await registrarMovimientoStock(id, ubicacion, actual[ubicacion], nuevaCantidad, 'edicion_inventario');
+
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -1484,11 +1531,37 @@ app.post('/api/inventario/trasladar', async (req, res) => {
 
     if (error) throw error;
 
+    await registrarMovimientoStock(
+      producto_id,
+      `stock_${tienda_destino}`,
+      producto[`stock_${tienda_destino}`],
+      (producto[`stock_${tienda_destino}`] || 0) + cant,
+      'traslado_deposito'
+    );
+
     res.json({
       success: true,
       data,
       mensaje: `${cant} unidades trasladadas de depósito a ${tienda_destino}`
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET historial de entradas de stock de un producto
+app.get('/api/productos/:id/movimientos-stock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('movimientos_stock')
+      .select('*')
+      .eq('producto_id', id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ success: true, data: data || [] });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
