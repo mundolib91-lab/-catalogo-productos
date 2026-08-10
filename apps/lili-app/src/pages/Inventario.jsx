@@ -40,9 +40,14 @@ function Inventario({ menuHamburguesa }) {
   const [expandidos, setExpandidos] = useState(new Set());
   const [variantesPorProducto, setVariantesPorProducto] = useState({}); // { productoId: { data: [], loading: false } }
 
-  // Modal historial de entradas de stock
+  // Modal historial de entradas de stock (de un producto)
   const [modalHistorial, setModalHistorial] = useState(null); // { producto }
   const [historial, setHistorial] = useState({ data: [], loading: false });
+
+  // Modal entradas del día (todos los productos)
+  const [modalEntradasDia, setModalEntradasDia] = useState(false);
+  const [fechaEntradasDia, setFechaEntradasDia] = useState(() => new Date().toISOString().slice(0, 10));
+  const [entradasDia, setEntradasDia] = useState({ data: [], loading: false });
 
   const searchTimeout = useRef(null);
 
@@ -98,6 +103,28 @@ function Inventario({ menuHamburguesa }) {
       console.error(e);
       setHistorial({ data: [], loading: false });
     }
+  };
+
+  const cargarEntradasDia = async (fecha) => {
+    setEntradasDia({ data: [], loading: true });
+    try {
+      const res = await fetch(`${API_URL}/movimientos-stock?fecha=${fecha}&tienda=${APP_CONFIG.tienda}`);
+      const json = await res.json();
+      setEntradasDia({ data: json.success ? json.data : [], loading: false });
+    } catch (e) {
+      console.error(e);
+      setEntradasDia({ data: [], loading: false });
+    }
+  };
+
+  const abrirEntradasDia = () => {
+    setModalEntradasDia(true);
+    cargarEntradasDia(fechaEntradasDia);
+  };
+
+  const cambiarFechaEntradasDia = (fecha) => {
+    setFechaEntradasDia(fecha);
+    cargarEntradasDia(fecha);
   };
 
   const guardarStock = async () => {
@@ -259,6 +286,12 @@ function Inventario({ menuHamburguesa }) {
             ? `${productos.length} de ${todosLosProductos.length} productos`
             : `${todosLosProductos.length} productos en existencias`}
         </div>
+        <button
+          onClick={abrirEntradasDia}
+          className="mt-3 w-full py-2 rounded-lg bg-green-700 hover:bg-green-800 transition-colors font-semibold text-base"
+        >
+          📅 Entradas del día
+        </button>
       </div>
 
       {/* Tabla con scroll horizontal */}
@@ -644,6 +677,70 @@ function Inventario({ menuHamburguesa }) {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Entradas del día (todos los productos) */}
+      {modalEntradasDia && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">📅 Entradas del día</h3>
+              <button
+                onClick={() => setModalEntradasDia(false)}
+                className="text-2xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <input
+              type="date"
+              value={fechaEntradasDia}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={e => cambiarFechaEntradasDia(e.target.value)}
+              className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-2 text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-green-500 focus:outline-none mb-4"
+            />
+
+            {entradasDia.loading ? (
+              <p className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando...</p>
+            ) : entradasDia.data.length === 0 ? (
+              <p className="text-center py-8 text-gray-400 dark:text-gray-500 italic">
+                No entró stock nuevo ese día.
+              </p>
+            ) : (
+              <>
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 mb-4 text-center text-green-700 dark:text-green-300 font-semibold">
+                  {entradasDia.data.length} entrada{entradasDia.data.length !== 1 ? 's' : ''} · {entradasDia.data.reduce((sum, m) => sum + m.cantidad_agregada, 0)} unidades en total
+                </div>
+                <div className="space-y-2">
+                  {entradasDia.data.map(m => (
+                    <div key={m.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-3">
+                      {m.producto?.imagen ? (
+                        <img src={m.producto.imagen} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0 flex items-center justify-center text-gray-400">?</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">
+                          {m.producto?.descripcion || m.producto?.nombre || 'Producto eliminado'}
+                        </div>
+                        <div className="flex justify-between items-center mt-0.5">
+                          <span className="text-green-600 dark:text-green-400 font-bold text-sm">
+                            +{m.cantidad_agregada} · {UBICACION_LABELS[m.ubicacion] || m.ubicacion}
+                          </span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            {new Date(m.created_at).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{ORIGEN_LABELS[m.origen] || m.origen}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

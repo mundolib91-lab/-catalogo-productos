@@ -1567,6 +1567,36 @@ app.get('/api/productos/:id/movimientos-stock', async (req, res) => {
   }
 });
 
+// GET todas las entradas de stock de un día (todos los productos), con datos del producto
+app.get('/api/movimientos-stock', async (req, res) => {
+  try {
+    const { tienda } = req.query;
+    // Fecha en formato YYYY-MM-DD. Por defecto, "hoy" en horario de Bolivia (UTC-4, sin horario de verano).
+    const fecha = req.query.fecha || new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const inicio = new Date(`${fecha}T00:00:00-04:00`);
+    const fin = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
+
+    const { data, error } = await supabase
+      .from('movimientos_stock')
+      .select('*, producto:producto_id(id, descripcion, nombre, imagen, marca, tienda_origen)')
+      .gte('created_at', inicio.toISOString())
+      .lt('created_at', fin.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    let resultado = data || [];
+    if (tienda) {
+      resultado = resultado.filter(m => m.producto?.tienda_origen === tienda);
+    }
+
+    res.json({ success: true, data: resultado, fecha });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== ENDPOINTS VARIANTES ====================
 
 // GET variantes de un producto
