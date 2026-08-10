@@ -12,13 +12,23 @@ const UBICACION_LABELS = {
   stock_lili: 'Lili Cosméticos'
 };
 
+const UBICACIONES = Object.entries(UBICACION_LABELS).map(([value, label]) => ({ value, label }));
+
 const ORIGEN_LABELS = {
   alta_individual: 'Alta de producto',
   alta_lote: 'Alta por lote',
   agregar_stock: '+ Stock',
   edicion_inventario: 'Edición en Inventario',
   edicion_registro: 'Edición en Registro',
-  traslado_deposito: 'Traslado desde depósito'
+  traslado_deposito: 'Traslado desde depósito',
+  traslado_tienda: 'Traslado entre tiendas'
+};
+
+const formatOrigenMovimiento = (m) => {
+  if (m.ubicacion_origen) {
+    return `Traslado desde ${UBICACION_LABELS[m.ubicacion_origen] || m.ubicacion_origen}`;
+  }
+  return ORIGEN_LABELS[m.origen] || m.origen;
 };
 
 function Inventario({ menuHamburguesa }) {
@@ -31,9 +41,10 @@ function Inventario({ menuHamburguesa }) {
   const [nuevoStock, setNuevoStock] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  // Modal trasladar
+  // Modal trasladar. Para variantes usa `tienda` (siempre desde depósito, sin cambios).
+  // Para el producto base usa `origen`/`destino`, entre cualquiera de las 4 ubicaciones.
   const [modalTrasladar, setModalTrasladar] = useState(null); // { producto, varianteId? }
-  const [traslado, setTraslado] = useState({ tienda: 'mundo_lib', cantidad: '' });
+  const [traslado, setTraslado] = useState({ tienda: 'mundo_lib', origen: 'stock_deposito', destino: 'stock_mundo_lib', cantidad: '' });
   const [trasladando, setTrasladando] = useState(false);
 
   // Variantes
@@ -178,7 +189,7 @@ function Inventario({ menuHamburguesa }) {
             }
           }));
           setModalTrasladar(null);
-          setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+          setTraslado({ tienda: 'mundo_lib', origen: 'stock_deposito', destino: 'stock_mundo_lib', cantidad: '' });
         } else {
           alert(json.error);
         }
@@ -189,7 +200,8 @@ function Inventario({ menuHamburguesa }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             producto_id: modalTrasladar.producto.id,
-            tienda_destino: traslado.tienda,
+            ubicacion_origen: traslado.origen,
+            ubicacion_destino: traslado.destino,
             cantidad: cant
           })
         });
@@ -197,7 +209,7 @@ function Inventario({ menuHamburguesa }) {
         if (json.success) {
           setTodosLosProductos(prev => prev.map(p => p.id === json.data.id ? { ...p, ...json.data } : p));
           setModalTrasladar(null);
-          setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+          setTraslado({ tienda: 'mundo_lib', origen: 'stock_deposito', destino: 'stock_mundo_lib', cantidad: '' });
         } else {
           alert(json.error);
         }
@@ -262,6 +274,8 @@ function Inventario({ menuHamburguesa }) {
   const stockTiendaDestino = modalTrasladar
     ? (modalTrasladar.producto[`stock_${traslado.tienda}`] || 0)
     : 0;
+  const stockOrigenProducto = modalTrasladar ? (modalTrasladar.producto[traslado.origen] || 0) : 0;
+  const stockDestinoProducto = modalTrasladar ? (modalTrasladar.producto[traslado.destino] || 0) : 0;
   const cantTraslado = parseInt(traslado.cantidad) || 0;
 
   return (
@@ -425,10 +439,16 @@ function Inventario({ menuHamburguesa }) {
                         <button
                           onClick={() => {
                             setModalTrasladar({ producto: p });
-                            setTraslado({ tienda: 'mundo_lib', cantidad: '' });
+                            const destinoDefault = APP_CONFIG.campo_stock;
+                            setTraslado({
+                              tienda: 'mundo_lib',
+                              origen: 'stock_deposito',
+                              destino: destinoDefault,
+                              cantidad: ''
+                            });
                           }}
                           className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60 transition-colors text-base font-bold"
-                          title="Trasladar deposito a tienda"
+                          title="Trasladar stock entre ubicaciones"
                         >
                           ↔
                         </button>
@@ -562,30 +582,83 @@ function Inventario({ menuHamburguesa }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-              Trasladar a tienda
+              Trasladar stock
             </h3>
             <p className="text-base text-gray-500 dark:text-gray-400 mb-4">
               {modalTrasladar.producto.descripcion}
             </p>
-            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 mb-4 text-center">
-              <span className="text-base text-orange-700 dark:text-orange-300 font-semibold">
-                Deposito disponible: {modalTrasladar.producto.stock_deposito ?? 0} unidades
-              </span>
-            </div>
-            <div className="mb-4">
-              <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Tienda destino
-              </label>
-              <select
-                value={traslado.tienda}
-                onChange={e => setTraslado(prev => ({ ...prev, tienda: e.target.value }))}
-                className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="mundo_lib">Mundo Lib (tiene: {modalTrasladar.producto.stock_mundo_lib ?? 0})</option>
-                <option value="majoli">Majoli (tiene: {modalTrasladar.producto.stock_majoli ?? 0})</option>
-                <option value="lili">Lili Cosmeticos (tiene: {modalTrasladar.producto.stock_lili ?? 0})</option>
-              </select>
-            </div>
+
+            {modalTrasladar.varianteId ? (
+              // Variante: siempre depósito -> tienda (sin selector de origen)
+              <>
+                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 mb-4 text-center">
+                  <span className="text-base text-orange-700 dark:text-orange-300 font-semibold">
+                    Deposito disponible: {modalTrasladar.producto.stock_deposito ?? 0} unidades
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Tienda destino
+                  </label>
+                  <select
+                    value={traslado.tienda}
+                    onChange={e => setTraslado(prev => ({ ...prev, tienda: e.target.value }))}
+                    className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="mundo_lib">Mundo Lib (tiene: {modalTrasladar.producto.stock_mundo_lib ?? 0})</option>
+                    <option value="majoli">Majoli (tiene: {modalTrasladar.producto.stock_majoli ?? 0})</option>
+                    <option value="lili">Lili Cosmeticos (tiene: {modalTrasladar.producto.stock_lili ?? 0})</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              // Producto base: cualquier ubicación a cualquier otra
+              <>
+                <div className="mb-4">
+                  <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Desde
+                  </label>
+                  <select
+                    value={traslado.origen}
+                    onChange={e => {
+                      const nuevoOrigen = e.target.value;
+                      setTraslado(prev => ({
+                        ...prev,
+                        origen: nuevoOrigen,
+                        // Si el destino quedó igual al nuevo origen, lo cambiamos
+                        destino: prev.destino === nuevoOrigen
+                          ? (UBICACIONES.find(u => u.value !== nuevoOrigen)?.value ?? prev.destino)
+                          : prev.destino
+                      }));
+                    }}
+                    className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    {UBICACIONES.map(u => (
+                      <option key={u.value} value={u.value}>
+                        {u.label} (tiene: {modalTrasladar.producto[u.value] ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Hacia
+                  </label>
+                  <select
+                    value={traslado.destino}
+                    onChange={e => setTraslado(prev => ({ ...prev, destino: e.target.value }))}
+                    className="w-full border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    {UBICACIONES.filter(u => u.value !== traslado.origen).map(u => (
+                      <option key={u.value} value={u.value}>
+                        {u.label} (tiene: {modalTrasladar.producto[u.value] ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
             <div className="mb-4">
               <label className="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Cantidad a trasladar
@@ -593,7 +666,7 @@ function Inventario({ menuHamburguesa }) {
               <input
                 type="number"
                 min="1"
-                max={modalTrasladar.producto.stock_deposito ?? 0}
+                max={modalTrasladar.varianteId ? (modalTrasladar.producto.stock_deposito ?? 0) : stockOrigenProducto}
                 value={traslado.cantidad}
                 onChange={e => setTraslado(prev => ({ ...prev, cantidad: e.target.value }))}
                 placeholder="0"
@@ -601,15 +674,24 @@ function Inventario({ menuHamburguesa }) {
                 autoFocus
               />
             </div>
+
             {cantTraslado > 0 && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                <div>Deposito: {modalTrasladar.producto.stock_deposito ?? 0} &rarr; {(modalTrasladar.producto.stock_deposito ?? 0) - cantTraslado}</div>
-                <div>
-                  {traslado.tienda === 'mundo_lib' ? 'Mundo Lib' : traslado.tienda === 'majoli' ? 'Majoli' : 'Lili'}
-                  : {stockTiendaDestino} &rarr; {stockTiendaDestino + cantTraslado}
+              modalTrasladar.varianteId ? (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <div>Deposito: {modalTrasladar.producto.stock_deposito ?? 0} &rarr; {(modalTrasladar.producto.stock_deposito ?? 0) - cantTraslado}</div>
+                  <div>
+                    {traslado.tienda === 'mundo_lib' ? 'Mundo Lib' : traslado.tienda === 'majoli' ? 'Majoli' : 'Lili'}
+                    : {stockTiendaDestino} &rarr; {stockTiendaDestino + cantTraslado}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <div>{UBICACION_LABELS[traslado.origen]}: {stockOrigenProducto} &rarr; {stockOrigenProducto - cantTraslado}</div>
+                  <div>{UBICACION_LABELS[traslado.destino]}: {stockDestinoProducto} &rarr; {stockDestinoProducto + cantTraslado}</div>
+                </div>
+              )
             )}
+
             <div className="flex gap-3">
               <button
                 onClick={() => setModalTrasladar(null)}
@@ -619,7 +701,11 @@ function Inventario({ menuHamburguesa }) {
               </button>
               <button
                 onClick={ejecutarTraslado}
-                disabled={trasladando || cantTraslado <= 0 || cantTraslado > (modalTrasladar.producto.stock_deposito ?? 0)}
+                disabled={
+                  trasladando ||
+                  cantTraslado <= 0 ||
+                  cantTraslado > (modalTrasladar.varianteId ? (modalTrasladar.producto.stock_deposito ?? 0) : stockOrigenProducto)
+                }
                 className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold text-lg disabled:opacity-50"
               >
                 {trasladando ? 'Trasladando...' : 'Confirmar'}
@@ -671,7 +757,7 @@ function Inventario({ menuHamburguesa }) {
                         +{m.cantidad_agregada} unid ({m.cantidad_anterior} → {m.cantidad_nueva})
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {ORIGEN_LABELS[m.origen] || m.origen}
+                        {formatOrigenMovimiento(m)}
                       </span>
                     </div>
                   </div>
@@ -735,7 +821,7 @@ function Inventario({ menuHamburguesa }) {
                             {new Date(m.created_at).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500">{ORIGEN_LABELS[m.origen] || m.origen}</div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500">{formatOrigenMovimiento(m)}</div>
                       </div>
                     </div>
                   ))}

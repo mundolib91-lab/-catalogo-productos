@@ -29,9 +29,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const UBICACION_NOMBRES = {
+  stock_deposito: 'depósito',
+  stock_mundo_lib: 'Mundo Lib',
+  stock_majoli: 'Majoli',
+  stock_lili: 'Lili Cosméticos'
+};
+
 // Registra una entrada de stock en el historial (movimientos_stock).
 // No lanza si falla: el historial es informativo, no debe tumbar la operación principal.
-async function registrarMovimientoStock(productoId, ubicacion, cantidadAnterior, cantidadNueva, origen) {
+async function registrarMovimientoStock(productoId, ubicacion, cantidadAnterior, cantidadNueva, origen, ubicacionOrigen = null) {
   const anterior = cantidadAnterior || 0;
   const nueva = cantidadNueva || 0;
   if (nueva <= anterior) return; // solo se registran ingresos (subidas), no correcciones a la baja
@@ -42,7 +49,8 @@ async function registrarMovimientoStock(productoId, ubicacion, cantidadAnterior,
       cantidad_anterior: anterior,
       cantidad_nueva: nueva,
       cantidad_agregada: nueva - anterior,
-      origen
+      origen,
+      ubicacion_origen: ubicacionOrigen
     }]);
     if (error) console.error('⚠️ No se pudo registrar movimiento de stock:', error.message);
   } catch (e) {
@@ -1489,14 +1497,17 @@ app.patch('/api/inventario/:id/stock', async (req, res) => {
   }
 });
 
-// Trasladar unidades del depósito a una tienda
+// Trasladar unidades entre dos ubicaciones cualquiera (depósito, mundo_lib, majoli, lili)
 app.post('/api/inventario/trasladar', async (req, res) => {
   try {
-    const { producto_id, tienda_destino, cantidad } = req.body;
+    const { producto_id, ubicacion_origen, ubicacion_destino, cantidad } = req.body;
 
-    const tiendasValidas = ['mundo_lib', 'majoli', 'lili'];
-    if (!tiendasValidas.includes(tienda_destino)) {
-      return res.status(400).json({ success: false, error: 'Tienda inválida' });
+    const ubicacionesValidas = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
+    if (!ubicacionesValidas.includes(ubicacion_origen) || !ubicacionesValidas.includes(ubicacion_destino)) {
+      return res.status(400).json({ success: false, error: 'Ubicación inválida' });
+    }
+    if (ubicacion_origen === ubicacion_destino) {
+      return res.status(400).json({ success: false, error: 'El origen y el destino no pueden ser el mismo' });
     }
     if (!cantidad || parseInt(cantidad) <= 0) {
       return res.status(400).json({ success: false, error: 'Cantidad inválida' });
@@ -1511,18 +1522,18 @@ app.post('/api/inventario/trasladar', async (req, res) => {
     if (errorGet) throw errorGet;
 
     const cant = parseInt(cantidad);
-    if ((producto.stock_deposito || 0) < cant) {
+    if ((producto[ubicacion_origen] || 0) < cant) {
       return res.status(400).json({
         success: false,
-        error: `Stock insuficiente en depósito. Disponible: ${producto.stock_deposito || 0}, Solicitado: ${cant}`
+        error: `Stock insuficiente en ${UBICACION_NOMBRES[ubicacion_origen]}. Disponible: ${producto[ubicacion_origen] || 0}, Solicitado: ${cant}`
       });
     }
 
     const { data, error } = await supabase
       .from('productos')
       .update({
-        stock_deposito: (producto.stock_deposito || 0) - cant,
-        [`stock_${tienda_destino}`]: (producto[`stock_${tienda_destino}`] || 0) + cant,
+        [ubicacion_origen]: (producto[ubicacion_origen] || 0) - cant,
+        [ubicacion_destino]: (producto[ubicacion_destino] || 0) + cant,
         fecha_ingreso: new Date().toISOString()
       })
       .eq('id', producto_id)
@@ -1533,16 +1544,17 @@ app.post('/api/inventario/trasladar', async (req, res) => {
 
     await registrarMovimientoStock(
       producto_id,
-      `stock_${tienda_destino}`,
-      producto[`stock_${tienda_destino}`],
-      (producto[`stock_${tienda_destino}`] || 0) + cant,
-      'traslado_deposito'
+      ubicacion_destino,
+      producto[ubicacion_destino],
+      (producto[ubicacion_destino] || 0) + cant,
+      ubicacion_origen === 'stock_deposito' ? 'traslado_deposito' : 'traslado_tienda',
+      ubicacion_origen
     );
 
     res.json({
       success: true,
       data,
-      mensaje: `${cant} unidades trasladadas de depósito a ${tienda_destino}`
+      mensaje: `${cant} unidades trasladadas de ${UBICACION_NOMBRES[ubicacion_origen]} a ${UBICACION_NOMBRES[ubicacion_destino]}`
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
