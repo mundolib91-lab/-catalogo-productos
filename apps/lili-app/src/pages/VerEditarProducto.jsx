@@ -21,6 +21,10 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
   const [agregandoVariante, setAgregandoVariante] = useState(false);
   const [guardandoVariante, setGuardandoVariante] = useState(false);
 
+  // Historial de precios
+  const [mostrarHistorialPrecios, setMostrarHistorialPrecios] = useState(false);
+  const [historialPrecios, setHistorialPrecios] = useState({ data: [], loading: false });
+
   useEffect(() => {
     cargarProducto();
     cargarVariantes();
@@ -56,6 +60,19 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
       console.error('Error cargando variantes:', e);
     } finally {
       setLoadingVariantes(false);
+    }
+  };
+
+  const abrirHistorialPrecios = async () => {
+    setMostrarHistorialPrecios(true);
+    setHistorialPrecios({ data: [], loading: true });
+    try {
+      const res = await fetch(`${API_URL}/productos/${productoId}/historial-precios`);
+      const json = await res.json();
+      setHistorialPrecios({ data: json.success ? json.data : [], loading: false });
+    } catch (e) {
+      console.error('Error cargando historial de precios:', e);
+      setHistorialPrecios({ data: [], loading: false });
     }
   };
 
@@ -367,8 +384,17 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
 
           {/* Precios */}
           <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
-            <h3 className="font-bold text-green-800 mb-4">💰 Precios y Ganancias</h3>
-            
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-green-800">💰 Precios y Ganancias</h3>
+              <button
+                type="button"
+                onClick={abrirHistorialPrecios}
+                className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-semibold"
+              >
+                🕓 Historial
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-lg font-medium text-gray-700 mb-1">
@@ -759,6 +785,66 @@ function VerEditarProducto({ productoId, onCerrar, onGuardar }) {
         </div>
 
       </div>
+
+      {/* Modal Historial de precios */}
+      {mostrarHistorialPrecios && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-900">🕓 Historial de precios</h3>
+              <button
+                onClick={() => setMostrarHistorialPrecios(false)}
+                className="text-2xl text-gray-400 hover:text-gray-600 leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {historialPrecios.loading ? (
+              <p className="text-center py-8 text-gray-500">Cargando...</p>
+            ) : historialPrecios.data.length === 0 ? (
+              <p className="text-center py-8 text-gray-400 italic">Sin cambios de precio registrados todavía.</p>
+            ) : (
+              <div className="space-y-2">
+                {historialPrecios.data.map(h => {
+                  const anterior = h.precio_anterior != null ? parseFloat(h.precio_anterior) : null;
+                  const nuevo = parseFloat(h.precio_nuevo);
+                  const variacion = anterior != null && anterior > 0 ? ((nuevo - anterior) / anterior) * 100 : null;
+                  return (
+                    <div key={h.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${h.tipo_precio === 'compra' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                          Precio {h.tipo_precio}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(h.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {' '}
+                          {new Date(h.created_at).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-gray-800">
+                          {anterior != null ? `Bs ${anterior.toFixed(2)} → ` : 'Precio inicial: '}
+                          Bs {nuevo.toFixed(2)}
+                          {variacion != null && (() => {
+                            // Compra: subir es malo (más costo) -> rojo. Venta: subir es bueno (más margen) -> verde.
+                            const esBueno = h.tipo_precio === 'compra' ? variacion < 0 : variacion > 0;
+                            return (
+                              <span className={esBueno ? 'text-green-600' : variacion === 0 ? 'text-gray-500' : 'text-red-600'}>
+                                {' '}({variacion >= 0 ? '+' : ''}{variacion.toFixed(1)}%)
+                              </span>
+                            );
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

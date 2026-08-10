@@ -58,6 +58,28 @@ async function registrarMovimientoStock(productoId, ubicacion, cantidadAnterior,
   }
 }
 
+// Registra un cambio de precio en el historial (historial_precios).
+// A diferencia del stock, acá se registra CUALQUIER cambio real (sube o baja),
+// no solo aumentos. No registra si el valor no cambió realmente.
+async function registrarCambioPrecio(productoId, tipoPrecio, precioAnterior, precioNuevo, origen) {
+  const anterior = precioAnterior != null ? parseFloat(precioAnterior) : null;
+  const nuevo = parseFloat(precioNuevo);
+  if (isNaN(nuevo)) return;
+  if (anterior !== null && anterior === nuevo) return; // sin cambio real
+  try {
+    const { error } = await supabase.from('historial_precios').insert([{
+      producto_id: productoId,
+      tipo_precio: tipoPrecio,
+      precio_anterior: anterior,
+      precio_nuevo: nuevo,
+      origen
+    }]);
+    if (error) console.error('⚠️ No se pudo registrar cambio de precio:', error.message);
+  } catch (e) {
+    console.error('⚠️ No se pudo registrar cambio de precio:', e.message);
+  }
+}
+
 // ==================== ENDPOINT SUBIDA DE IMÁGENES ====================
 
 app.post('/api/upload/imagen', upload.single('imagen'), async (req, res) => {
@@ -371,6 +393,8 @@ app.post('/api/productos', async (req, res) => {
     for (const c of camposStockCreacion) {
       if (data[c] > 0) await registrarMovimientoStock(data.id, c, 0, data[c], 'alta_individual');
     }
+    if (data.precio_compra_unidad) await registrarCambioPrecio(data.id, 'compra', null, data.precio_compra_unidad, 'alta_individual');
+    if (data.precio_venta_unidad) await registrarCambioPrecio(data.id, 'venta', null, data.precio_venta_unidad, 'alta_individual');
 
     res.status(201).json({ success: true, data });
   } catch (error) {
@@ -398,18 +422,35 @@ app.put('/api/productos/:id', async (req, res) => {
     // Si sube algún stock, registrar fecha de ingreso (no cuenta si es una baja/corrección)
     const camposStock = ['stock_deposito', 'stock_mundo_lib', 'stock_majoli', 'stock_lili'];
     const stockTocado = camposStock.filter(c => updates[c] !== undefined && updates[c] !== null && updates[c] !== '');
+    const precioCompraTocado = updates.precio_compra_unidad !== undefined && updates.precio_compra_unidad !== null && updates.precio_compra_unidad !== '';
+    const precioVentaTocado = updates.precio_venta_unidad !== undefined && updates.precio_venta_unidad !== null && updates.precio_venta_unidad !== '';
+
     let stockAnterior = null;
-    if (stockTocado.length > 0) {
+    let precioCompraAnterior, precioVentaAnterior;
+    if (stockTocado.length > 0 || precioCompraTocado || precioVentaTocado) {
+      const camposASeleccionar = [...stockTocado];
+      if (precioCompraTocado) camposASeleccionar.push('precio_compra_unidad');
+      if (precioVentaTocado) camposASeleccionar.push('precio_venta_unidad');
+
       const { data: actual } = await supabase
         .from('productos')
-        .select(stockTocado.join(','))
+        .select(camposASeleccionar.join(','))
         .eq('id', id)
         .single();
-      stockAnterior = actual;
-      if (actual && stockTocado.some(c => parseInt(updates[c]) > (actual[c] || 0))) {
-        updates.fecha_ingreso = new Date().toISOString();
+
+      if (stockTocado.length > 0) {
+        stockAnterior = actual;
+        if (actual && stockTocado.some(c => parseInt(updates[c]) > (actual[c] || 0))) {
+          updates.fecha_ingreso = new Date().toISOString();
+        }
       }
+      if (precioCompraTocado) precioCompraAnterior = actual?.precio_compra_unidad;
+      if (precioVentaTocado) precioVentaAnterior = actual?.precio_venta_unidad;
     }
+
+    // Guardar los valores nuevos antes de la limpieza (por si alguno queda '' y se borra)
+    const nuevoPrecioCompra = updates.precio_compra_unidad;
+    const nuevoPrecioVenta = updates.precio_venta_unidad;
 
     // Limpiar campos undefined o null
     Object.keys(updates).forEach(key => {
@@ -435,6 +476,8 @@ app.put('/api/productos/:id', async (req, res) => {
         await registrarMovimientoStock(id, c, stockAnterior[c], parseInt(updates[c]), 'edicion_registro');
       }
     }
+    if (precioCompraTocado) await registrarCambioPrecio(id, 'compra', precioCompraAnterior, nuevoPrecioCompra, 'edicion_registro');
+    if (precioVentaTocado) await registrarCambioPrecio(id, 'venta', precioVentaAnterior, nuevoPrecioVenta, 'edicion_registro');
 
     console.log('✅ Producto actualizado:', data);
     res.json({ success: true, data });
@@ -646,6 +689,13 @@ app.put('/api/productos/:id/completar', async (req, res) => {
 
     if (error) throw error;
 
+    if (updates.precio_compra_unidad !== undefined) {
+      await registrarCambioPrecio(id, 'compra', productoActual.precio_compra_unidad, updates.precio_compra_unidad, 'completar');
+    }
+    if (updates.precio_venta_unidad !== undefined) {
+      await registrarCambioPrecio(id, 'venta', productoActual.precio_venta_unidad, updates.precio_venta_unidad, 'completar');
+    }
+
     res.json({
       success: true,
       data,
@@ -714,6 +764,9 @@ app.post('/api/productos/rapido', async (req, res) => {
     if (insertError) {
       throw insertError;
     }
+
+    if (newProducto.precio_compra_unidad) await registrarCambioPrecio(newProducto.id, 'compra', null, newProducto.precio_compra_unidad, 'alta_individual');
+    if (newProducto.precio_venta_unidad) await registrarCambioPrecio(newProducto.id, 'venta', null, newProducto.precio_venta_unidad, 'alta_individual');
 
     // 2. Actualizar con stock en una operación separada
     const updateData = {};
@@ -931,6 +984,8 @@ app.post('/api/productos/lote', async (req, res) => {
       for (const c of camposStockLote) {
         if (p[c] > 0) await registrarMovimientoStock(p.id, c, 0, p[c], 'alta_lote');
       }
+      if (p.precio_compra_unidad) await registrarCambioPrecio(p.id, 'compra', null, p.precio_compra_unidad, 'alta_lote');
+      if (p.precio_venta_unidad) await registrarCambioPrecio(p.id, 'venta', null, p.precio_venta_unidad, 'alta_lote');
     }
 
     res.status(201).json({
@@ -1567,6 +1622,24 @@ app.get('/api/productos/:id/movimientos-stock', async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('movimientos_stock')
+      .select('*')
+      .eq('producto_id', id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ success: true, data: data || [] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET historial de cambios de precio de un producto
+app.get('/api/productos/:id/historial-precios', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('historial_precios')
       .select('*')
       .eq('producto_id', id)
       .order('created_at', { ascending: false });
